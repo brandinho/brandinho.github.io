@@ -102,9 +102,9 @@ analytics:
 # Site Author
 author:
   name             : "Brandon Da Silva"
-  avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "Deep Learning Addict"
-  location         : "Mars"
+  avatar           : "/images/bio-photo.jpg"
+  bio              : "Machine Learning Portfolio"
+  location         : "Toronto, ON"
   email            : "brandasilva9@gmail.com"
   github           : "brandinho"
   linkedin         : "brandon-da-silva-a67496a7"
