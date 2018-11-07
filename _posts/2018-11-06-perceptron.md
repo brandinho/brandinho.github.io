@@ -3,7 +3,7 @@ title: "Machine Learning Project: Perceptron"
 date: 2018-11-06
 tags: [machine learning, deep learning, neural network]
 header:
-  image: "/images/perceptron/percept.jpg"
+  image: "/images/lin-sep.jpg"
 excerpt: "Machine Learning, Perceptron, Data Science"
 mathjax: "true"
 ---
@@ -50,11 +50,14 @@ R code block:
 
 here's some inline code `x+y`
 
+Here's an image:
+<img src="{{ site.url }}{{ site.baseurl }}/images/lin-sep.jpg" alt="linearly serparable data">
 
-
+Here's another image using Kramdown:
+![alt]({{ site.url }}{{ site.baseurl }}/images/lin-sep.jpg)
 
 Here's some math:
 
 $$z=x+y$$
 
-Here's some inline math $z=x+y$
+Here's some inline math $$z=x+y$$
