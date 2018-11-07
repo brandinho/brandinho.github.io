@@ -3,7 +3,7 @@ title: "Machine Learning Project: Perceptron"
 date: 2018-11-06
 tags: [machine learning, deep learning, neural network]
 header:
-  image: "/images/lin-sep.jpg"
+  image: "/images/ML-banner.jpg"
 excerpt: "Machine Learning, Perceptron, Data Science"
 mathjax: "true"
 ---
