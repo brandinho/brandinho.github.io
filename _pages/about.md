@@ -5,4 +5,4 @@ header:
   image: "/images/china-landscape.jpg"
 ---
 
-I'm a machine learning developer at OPTrust. I focus on deep reinforcement learning and deep generative models.
+I'm a machine learning developer at OPTrust. I have a love for reinforcement learning and have recently acquired a passion for generative models.

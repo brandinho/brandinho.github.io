@@ -1,20 +1,43 @@
 ---
-title: "Machine Learning Project: Perceptron"
-date: 2018-11-06
-tags: [machine learning, deep learning, neural network]
+title: "Learning Probability Distributions in Bounded Action Spaces"
+date: 2018-11-07
+tags: [Reinforcement Learning, Bayesian, Reparameterization]
 header:
   image: "/images/ML-banner.jpg"
-excerpt: "Machine Learning, Perceptron, Data Science"
+excerpt: "Reinforcement Learning, Neural Networks, Bayesian"
 mathjax: "true"
 ---
 
-# H1 Heading
+## Overview
 
-## H2 Heading
+In this post we will learn how to apply reinforcement learning in a probabilistic manner. More specifically, we will be looking at some of the difficulties in applying conventional approaches to bounded action spaces, and provide a solution.
 
-### H3 Heading
+## Reinforcement Learning Background
 
-Here's some basic text
+Provide some basic background on RL:
+* Markov Decision Process
+* Discrete vs Continuous Policies
+* Deterministic vs Probabilistic Continuous Policies
+
+## Probability Background
+
+Provide some basic background on Bayes Theorem:
+* We are trying to learn a posterior distribution
+* Different ways to make a bayesian policy
+* Problem with bounded action spaces
+* One solution can be to use a bounded activation function and approximate a bayesian neural network with MC dropout
+
+## Novel Solution
+
+Present our novel solution to the problem. We will show empirically and prove it mathematically that our approach is superior to the bayesian approximation.
+* Explain the challenge in clipping samples outside the bounds
+* Walk through reparameterization for the unbounded case
+* Expand it for our solution
+
+## Concluding Remarks
+
+Some conclusions
+
 
 And here's some *italics*
 
