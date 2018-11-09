@@ -14,9 +14,9 @@ In this post we will learn how to apply reinforcement learning in a probabilisti
 
 ## Reinforcement Learning Background
 
-I am not going to provide a complete background of Reinforcement Learning because there are already some excellent resources online such as [Arthur Juliani's blogs](https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0) and [David Silver's lectures](https://www.youtube.com/watch?v=2pWv7GOvuf0&list=PLzuuYNsE1EZAXYR4FJ75jcJseBmo4KQ9-). I highly recommend going through both of them to get a solid understanding of the fundamentals.
+I am not going to provide a complete background on Reinforcement Learning (RL) because there are already some excellent resources online such as [Arthur Juliani's blogs](https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0) and [David Silver's lectures](https://www.youtube.com/watch?v=2pWv7GOvuf0&list=PLzuuYNsE1EZAXYR4FJ75jcJseBmo4KQ9-). I highly recommend going through both to get a solid understanding of the fundamentals. With that said, I will explain some concepts that are important for this blog post.
 
-With that said, I will explain some of the basics needed to understand this blog.
+At the most basic level, the goal of RL is to learn a mapping from states to actions. What exactly does that mean? To understand that, I think it is important to take a step back and understand the RL framework more generally.
 
 Provide some basic background on RL:
 * Markov Decision Process
