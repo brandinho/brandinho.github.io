@@ -16,7 +16,11 @@ In this post we will learn how to apply reinforcement learning in a probabilisti
 
 I am not going to provide a complete background on Reinforcement Learning (RL) because there are already some excellent resources online such as [Arthur Juliani's blogs](https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0) and [David Silver's lectures](https://www.youtube.com/watch?v=2pWv7GOvuf0&list=PLzuuYNsE1EZAXYR4FJ75jcJseBmo4KQ9-). I highly recommend going through both to get a solid understanding of the fundamentals. With that said, I will explain some concepts that are important for this blog post.
 
-At the most basic level, the goal of RL is to learn a mapping from states to actions. What exactly does that mean? To understand that, I think it is important to take a step back and understand the RL framework more generally.
+At the most basic level, the goal of RL is to learn a mapping from states to actions. To understand what this means, I think it is important to take a step back and understand the RL framework more generally. Cue the overused RL diagram:
+
+![alt]({{ site.url }}{{ site.baseurl }}/images/AgentEnvironment.jpg)
+
+The first thing to notice is that there is a feedback loop between the agent and the environment. For clarity, the agent refers to the AI that we are creating, while the environment refers to the world that the agent has to navigate through. In order to navigate through an environment, the agent has to take actions. The specific actions will depend on the domain, but some examples include $${Up, Down}$$ in pong, $${Raise, Call, Fold}$$ in poker, and $${Buy, Hold, Sell}$$ in investments. After the agent takes an action, it receives an observation of the environment (the current state) and an immediate reward (assuming we don't have sparse rewards).
 
 Provide some basic background on RL:
 * Markov Decision Process
