@@ -58,7 +58,8 @@ $$\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))$$
 
 However, if we want to use backpropagation, we have to make the whole computational graph differentiable. We can do this by defining $$\epsilon$$, which does not depend on $$\theta$$. So now, gradients can flow through the entire graph without passing through the random variable:
 
-$$\epsilon \sim \mathcal{N}(0,I)$$ \\
+$$\epsilon \sim \mathcal{N}(0,I)$$
+
 $$\pi = \mu_{\theta} + \sigma_{\theta} \times \epsilon$$
 
 Python code to take the random variable outside of the computation graph is shown below:
