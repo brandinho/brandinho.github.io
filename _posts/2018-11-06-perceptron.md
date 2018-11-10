@@ -6,6 +6,7 @@ header:
   image: "/images/ML-banner.jpg"
 excerpt: "Reinforcement Learning, Neural Networks, Bayesian"
 mathjax: "true"
+comment: true
 ---
 
 ## Overview
@@ -18,8 +19,9 @@ I am not going to provide a complete background on Reinforcement Learning (RL) b
 
 At the most basic level, the goal of RL is to learn a mapping from states to actions. To understand what this means, I think it is important to take a step back and understand the RL framework more generally. Cue the overused RL diagram:
 
-{: .center }
+{:refdef: style="text-align: center;"}
 ![alt]({{ site.url }}{{ site.baseurl }}/images/AgentEnvironment.jpg)
+{: refdef}
 
 The first thing to notice is that there is a feedback loop between the agent and the environment. For clarity, the agent refers to the AI that we are creating, while the environment refers to the world that the agent has to navigate through. In order to navigate through an environment, the agent has to take actions. The specific actions will depend on the domain - we will describe a few fairly soon. After the agent takes an action, it receives an observation of the environment (the current state) and a reward (assuming we don't have sparse rewards).
 
