@@ -31,8 +31,9 @@ Now let's talk a bit about actions an agent can take. The first distinction I wo
 
 Given enough time, the agent can theoretically hide anywhere - so the action space is unbounded. In contrast, we can have a continuous action space that is bounded. An example close to my heart is position sizing when trading a financial asset. The bounds are -1 (100% Short) and 1 (100% Long). To map states to that bounded action space, we can use $$\tanh$$ in the final layer of a neural network. That seems pretty easy... so why am I writing a blog post about it? Often times we need more than just a deterministic output, especially when the underlying data has a low signal-to-noise ratio. The additional piece of information that we need is *uncertainty* in our agent's decision. We will use a Bayesian approach to model a posterior distribution and sample from this distribution to estimate the uncertainty. Don't worry if that doesn't completely make sense yet - it will by the end of this post!
 
-
 ## Probability Background
+
+For a great introduction to Bayesian statistics I suggest reading [Will Kurt's blog](https://www.countbayesie.com) - Count Bayesie. It's awesome.
 
 Provide some basic background on Bayes Theorem:
 * We are trying to learn a posterior distribution
@@ -46,6 +47,8 @@ Present our novel solution to the problem. We will show empirically and prove ma
 * Explain the challenge in clipping samples outside the bounds
 * Walk through reparameterization for the unbounded case
 * Expand it for our solution
+
+![Alt Text](/images/posterior.gif)
 
 ## Concluding Remarks
 
