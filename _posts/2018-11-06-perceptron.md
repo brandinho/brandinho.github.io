@@ -44,6 +44,10 @@ I omitted a kernel density estimation (KDE) plot on top of the histogram because
 
 ![Alt Text](/images/MC_dropout_posterior.gif)
 
+## Reparameterization
+
+$$\epsilon \sim \mathcal{N}(0,I)$$
+
 ## Novel Solution
 
 Present our novel solution to the problem. We will show empirically and prove mathematically that our approach is superior to the bayesian approximation.
@@ -51,11 +55,11 @@ Present our novel solution to the problem. We will show empirically and prove ma
 Since we actually know the mean and standard deviation of the distribution, we can plot both the histogram and the PDF as follows:
 
 ```python
-  import matplotlib.pyplot as plt 
+  import matplotlib.pyplot as plt
   import scipy.stats as stats
 
-  # We are assuming that we already calculated a policy and sampled from the posterior distribution
   pdf_probs = stats.truncnorm.pdf(bayesian_policy, lower_bound, upper_bound, policy_mean, policy_std)
+
   plt.hist(bayesian_policy, bins = 50, normed = True, alpha = 0.3, label = "Histogram")
   plt.plot(bayesian_policy[bayesian_policy.argsort()], pdf_probs[bayesian_policy.argsort()], linewidth = 2.3, label = "PDF Curve")
   plt.xlim(-1,1)
@@ -77,36 +81,5 @@ Since we actually know the mean and standard deviation of the distribution, we c
 
 Some conclusions
 
-
-And here's some *italics*
-
-Here's some **bold** text
-
-What about a [link](https://github.com/brandinho)
-
-Here's a bulleted list:
-* First item
-+ Second item
-- Third item
-
-Here's a numbered list:
-1. First
-2. Second
-3. Third
-
-
-here's some inline code `x+y`
-
-Here's an image:
-<img src="{{ site.url }}{{ site.baseurl }}/images/lin-sep.jpg" alt="linearly serparable data">
-
-Here's another image using Kramdown:
-![alt]({{ site.url }}{{ site.baseurl }}/images/lin-sep.jpg)
-
-Here's some math:
-
-$$z=x+y$$
-
-Here's some inline math $$z=x+y$$
 
 {% include disqus.html %}
