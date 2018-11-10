@@ -9,6 +9,8 @@ mathjax: "true"
 comment: true
 ---
 
+{% gif path_to_gif %}
+
 ## Overview
 
 In this post we will learn how to apply reinforcement learning in a probabilistic manner. More specifically, we will be looking at some of the difficulties in applying conventional approaches to bounded action spaces, and provide a solution.
