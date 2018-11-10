@@ -10,7 +10,7 @@ mathjax: "true"
 
 ## Overview
 
-In this post we will learn how to apply reinforcement learning in a probabilistic manner. More specifically, we will be looking at some of the difficulties in applying conventional approaches to bounded action spaces, and provide a solution.
+In this post we will learn how to apply reinforcement learning in a probabilistic manner. More specifically, we will be looking at some of the difficulties in applying conventional approaches to bounded action spaces, and provide a solution. This blog assumes you have knowledge in deep learning. If not, check out [Michael Nielsen's book](http://neuralnetworksanddeeplearning.com/chap1.html) - it is very comprehensive and easy to understand.
 
 ## Reinforcement Learning Background
 
@@ -24,25 +24,27 @@ At the most basic level, the goal of RL is to learn a mapping from states to act
 
 The first thing to notice is that there is a feedback loop between the agent and the environment. For clarity, the agent refers to the AI that we are creating, while the environment refers to the world that the agent has to navigate through. In order to navigate through an environment, the agent has to take actions. The specific actions will depend on the domain - we will describe a few fairly soon. After the agent takes an action, it receives an observation of the environment (the current state) and a reward (assuming we don't have sparse rewards).
 
-After interacting with the environment for long enough, we hope that our agent learns how to take actions that maximize its cumulative reward over the long-term. It is important to realize that the best action in one state is not necessarily the best action in another state. So going back to our statement about mapping states to actions, this simply means that we want our agent to learn the best actions to take in each environment state.
+After interacting with the environment for long enough, we hope that our agent learns how to take actions that maximize its cumulative reward over the long-term. It is important to realize that the best action in one state is not necessarily the best action in another state. So going back to our statement about mapping states to actions, this simply means that we want our agent to learn the best actions to take in each environment state. The function that maps states to actions is called a policy and is denoted as $$\pi(a|s)$$.
 
 Now let's talk a bit about actions an agent can take. The first distinction I would like to make is between discrete actions and continuous actions. When we refer to discrete actions, we simply mean that there is a finite set of possible actions an agent can take. For example, in pong an agent can decide to move up or down. On the other hand, continuous actions have an infinite number of possibilities. An example of a continuous action, although kind of silly, is the hiding position of an agent if it is playing hide and seek.
 
 Given enough time, the agent can theoretically hide anywhere - so the action space is unbounded. In contrast, we can have a continuous action space that is bounded. An example close to my heart is position sizing when trading a financial asset. The bounds are -1 (100% Short) and 1 (100% Long). To map states to that bounded action space, we can use $$\tanh$$ in the final layer of a neural network. That seems pretty easy... so why am I writing a blog post about it? Often times we need more than just a deterministic output, especially when the underlying data has a low signal-to-noise ratio. The additional piece of information that we need is *uncertainty* in our agent's decision. We will use a Bayesian approach to model a posterior distribution and sample from this distribution to estimate the uncertainty. Don't worry if that doesn't completely make sense yet - it will by the end of this post!
 
-## Probability Background
+## Probability Distributions
 
 For a great introduction to Bayesian statistics I suggest reading [Will Kurt's blog](https://www.countbayesie.com) - Count Bayesie. It's awesome.
 
-Provide some basic background on Bayes Theorem:
-* We are trying to learn a posterior distribution
-* Different ways to make a bayesian policy
-* Problem with bounded action spaces
-* One solution can be to use a bounded activation function and approximate a bayesian neural network with MC dropout
+Distributions can be thought of as representing beliefs about the world. Specifically as it relates to our task at hand, the probability distributions represent our beliefs in how good an action is given the state. In the financial markets context, where the action space is continuous and bounded between -1 and 1, a mean close to -1 (1) represents a belief that we should short (long) the asset. Building on this example, if the standard deviation in our distribution is large (small) then we remain uncertain (certain). Explaining this last point a bit more - if there is a large standard deviation with respect to which action to take, then the agent has not developed a strong belief yet.
 
-I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using `sns.kdeplot`, if anyone knows how to fix this, please let me know in the comments section!
+Whenever you hear anyone talking about Bayesian statistics, you always hear "prior" and "posterior". Simply put, a prior is your belief about the world *before* receiving new information. However, once you receive new information, then you update your prior distribution to form a posterior distribution. After that, if you receive more information, then your posterior becomes your prior, and the new information gets incorporated to form a new posterior distribution. Essentially, there is this feedback loop of continual learning that happens as more and more new information gets processed by your agent.
+
+Our goal is to learn a good posterior distribution on actions, conditioned on the state that the agent is in. If you are familiar with [this paper](https://arxiv.org/pdf/1506.02142.pdf), then you might be thinking that we can just use Monte Carlo (MC) dropout with a $$\tanh$$" output layer. For those who are not familiar with this concept, let me explain. Dropout is a technique that was originally used for neural network regularization. With each pass, it will randomly "drop" neurons (proportional to the dropout rate) from each hidden layer. This reduces the output's dependency on any one particular neuron, which should help generalization. However, researchers at Cambridge found that using dropout during inference can be used to approximate a posterior distribution. This is because each time you pass inputs through the network, a different set of neurons will be dropped, so the output is going to be different for each run - creating a distribution of outputs.
+
+The great thing about this architecture is that you can easily pass gradients through the policy network. The loss function that we are minimizing throughout this blog is $$\mathcal{L} = - r \times \pi(s)$$, where $$r$$ denotes the reward and $$\pi(s)$$ denotes the policy output given the states (i.e. the action). We wanted to demonstrate how the distribution changes in a controlled environment. So we use the same state input throughout all our experiments and continually feed it a positive reward to see how the distribution changes during training. Below is the first example using the MC Dropout method and a $$\tanh$$ output layer.
 
 ![Alt Text](/images/MC_dropout_posterior.gif)
+
+I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using `sns.kdeplot`, if anyone knows how to fix this, please let me know in the comments section!
 
 ## Reparameterization
 
