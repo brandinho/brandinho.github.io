@@ -34,21 +34,35 @@ Given enough time, the agent can theoretically hide anywhere - so the action spa
 
 For a great introduction to Bayesian statistics I suggest reading [Will Kurt's blog](https://www.countbayesie.com) - Count Bayesie. It's awesome.
 
-Distributions can be thought of as representing beliefs about the world. Specifically as it relates to our task at hand, the probability distributions represent our beliefs in how good an action is given the state. In the financial markets context, where the action space is continuous and bounded between -1 and 1, a mean close to -1 (1) represents a belief that we should short (long) the asset. Building on this example, if the standard deviation in our distribution is large (small) then we remain uncertain (certain). Explaining this last point a bit more - if there is a large standard deviation with respect to which action to take, then the agent has not developed a strong belief yet.
+Distributions can be thought of as representing beliefs about the world. Specifically as it relates to our task at hand, the probability distributions represent our beliefs in how good an action is, given the state. In the financial markets context, where the action space is continuous and bounded between -1 and 1, a mean close to 1 represents a belief that it is a good time to buy that asset, so we should long it. A mean close to -1 represents the opposite, so we should short the asset. Building on this example, if the standard deviation in our distribution is large (small) then our agent is uncertain (certain) in its decision. In other words, if the agent's policy has a large standard deviation, then it has not developed a strong belief yet.
 
 Whenever you hear anyone talking about Bayesian statistics, you always hear "prior" and "posterior". Simply put, a prior is your belief about the world *before* receiving new information. However, once you receive new information, then you update your prior distribution to form a posterior distribution. After that, if you receive more information, then your posterior becomes your prior, and the new information gets incorporated to form a new posterior distribution. Essentially, there is this feedback loop of continual learning that happens as more and more new information gets processed by your agent.
 
-Our goal is to learn a good posterior distribution on actions, conditioned on the state that the agent is in. If you are familiar with [this paper](https://arxiv.org/pdf/1506.02142.pdf), then you might be thinking that we can just use Monte Carlo (MC) dropout with a $$\tanh$$" output layer. For those who are not familiar with this concept, let me explain. Dropout is a technique that was originally used for neural network regularization. With each pass, it will randomly "drop" neurons (proportional to the dropout rate) from each hidden layer. This reduces the output's dependency on any one particular neuron, which should help generalization. However, researchers at Cambridge found that using dropout during inference can be used to approximate a posterior distribution. This is because each time you pass inputs through the network, a different set of neurons will be dropped, so the output is going to be different for each run - creating a distribution of outputs.
+Our goal is to learn a good posterior distribution on actions, conditioned on the state that the agent is in. If you are familiar with [this paper](https://arxiv.org/pdf/1506.02142.pdf), then you might be thinking that we can just use Monte Carlo (MC) dropout with a $$\tanh$$ output layer. For those who are not familiar with this concept, let me explain. Dropout is a technique that was originally used for neural network regularization. With each pass, it will randomly "drop" neurons from each hidden layer by setting their output to 0. This reduces the output's dependency on any one particular neuron, which should help generalization. However, researchers at Cambridge found that using dropout during inference can be used to approximate a posterior distribution. This is because each time you pass inputs through the network, a different set of neurons will be dropped, so the output is going to be different for each run - creating a distribution of outputs.
 
-The great thing about this architecture is that you can easily pass gradients through the policy network. The loss function that we are minimizing throughout this blog is $$\mathcal{L} = - r \times \pi(s)$$, where $$r$$ denotes the reward and $$\pi(s)$$ denotes the policy output given the states (i.e. the action). We wanted to demonstrate how the distribution changes in a controlled environment. So we use the same state input throughout all our experiments and continually feed it a positive reward to see how the distribution changes during training. Below is the first example using the MC Dropout method and a $$\tanh$$ output layer.
+The great thing about this architecture is that you can easily pass gradients through the policy network. The loss function that we are minimizing throughout this blog is $$\mathcal{L} = - r \times \pi(s)$$, where $$r$$ denotes the reward and $$\pi(s)$$ denotes the policy output given the states (i.e. the action). We wanted to demonstrate how the distribution changes in a controlled environment. So we use the same state input throughout all our experiments and continually feed it a positive reward to view the changes during training. Below is the first example using the MC Dropout method and a $$\tanh$$ output layer.
 
 ![Alt Text](/images/MC_dropout_posterior.gif)
 
 I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using `sns.kdeplot`, if anyone knows how to fix this, please let me know in the comments section!
 
-## Reparameterization
+There are two things that I don't particularly like about this approach. The first is that it is possible to have multiple peaks in the distribution, as seen when the neural network is first initialized. I realize that as training went on, only one peak emerged. However, the fact that an agent can potentially learn such a distribution (with multiple peaks) makes me uncomfortable. If we go back to our example in the financial markets, an action of -1 will have the exact opposite reward of 1 (because it is the other side of the trade), so having peaks at both ends of the spectrum is quite confusing. I would much rather just have one peak near 0 with a large standard deviation if the agent is uncertain which action to take. The second is that it becomes overly optimistic in its decision when compared to a gaussian output (demonstrated below), which could possibly indicate that it is understating the uncertainty.
+
+Great, so that's the solution - let's use a normal distribution in the output!
+
+## Reparameterization Trick
+
+You might be thinking that it doesn't make sense to have a normal distribution as the output since you can't take the derivative of a random variable. You are correct, but we can apply the reparameterization trick to move the random variable outside of the neural network. If our neural network parameters are denoted by $$\theta$$, then we can define $$\mu_{\theta}$$ and $$\sigma_{\theta}$$ as outputs of the neural network, such that:
+
+$$\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))$$
+
+However, if we want to use backpropagation, we have to make the whole computational graph differentiable. We can do this by defining $$\epsilon$$, which does not depend on $$\theta$$. So now, gradients can flow through the entire graph without passing through the random variable:
 
 $$\epsilon \sim \mathcal{N}(0,I)$$
+$$\pi = \mu_{\theta} + \sigma_{\theta} \dot \epsilon$$
+
+Python code to take the random variable outside of the computation graph is shown below:
+
 
 ## Novel Solution
 
