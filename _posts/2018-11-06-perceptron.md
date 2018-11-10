@@ -6,10 +6,8 @@ header:
   image: "/images/ML-banner.jpg"
 excerpt: "Reinforcement Learning, Neural Networks, Bayesian"
 mathjax: "true"
-comment: true
+comments: true
 ---
-
-{% gif path_to_gif %}
 
 ## Overview
 
@@ -43,14 +41,21 @@ Provide some basic background on Bayes Theorem:
 * Problem with bounded action spaces
 * One solution can be to use a bounded activation function and approximate a bayesian neural network with MC dropout
 
+![Alt Text](/images/MC_dropout_posterior.gif)
+
 ## Novel Solution
 
 Present our novel solution to the problem. We will show empirically and prove mathematically that our approach is superior to the bayesian approximation.
+
+![Alt Text](/images/clipped_posterior.gif)
+
 * Explain the challenge in clipping samples outside the bounds
 * Walk through reparameterization for the unbounded case
 * Expand it for our solution
 
 ![Alt Text](/images/posterior.gif)
+
+<img id="gif1" src="static1.jpg">
 
 ## Concluding Remarks
 
