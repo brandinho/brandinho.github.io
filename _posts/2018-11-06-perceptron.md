@@ -40,11 +40,29 @@ Provide some basic background on Bayes Theorem:
 * Problem with bounded action spaces
 * One solution can be to use a bounded activation function and approximate a bayesian neural network with MC dropout
 
+I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using `sns.kdeplot`, if anyone knows how to fix this, please let me know in the comments section!
+
 ![Alt Text](/images/MC_dropout_posterior.gif)
 
 ## Novel Solution
 
 Present our novel solution to the problem. We will show empirically and prove mathematically that our approach is superior to the bayesian approximation.
+
+Since we actually know the mean and standard deviation of the distribution, we can plot both the histogram and the PDF as follows:
+
+```python
+  import matplotlib.pyplot as plt 
+  import scipy.stats as stats
+
+  # We are assuming that we already calculated a policy and sampled from the posterior distribution
+  pdf_probs = stats.truncnorm.pdf(bayesian_policy, lower_bound, upper_bound, policy_mean, policy_std)
+  plt.hist(bayesian_policy, bins = 50, normed = True, alpha = 0.3, label = "Histogram")
+  plt.plot(bayesian_policy[bayesian_policy.argsort()], pdf_probs[bayesian_policy.argsort()], linewidth = 2.3, label = "PDF Curve")
+  plt.xlim(-1,1)
+  plt.legend(loc = 2)
+
+  plt.show()
+```
 
 ![Alt Text](/images/clipped_posterior.gif)
 
@@ -54,7 +72,6 @@ Present our novel solution to the problem. We will show empirically and prove ma
 
 ![Alt Text](/images/posterior.gif)
 
-<img id="gif1" src="static1.jpg">
 
 ## Concluding Remarks
 
@@ -77,21 +94,6 @@ Here's a numbered list:
 2. Second
 3. Third
 
-Python code block:
-```python
-  import numpy as np
-
-  def test_function(x, y):
-    z = np.sum(x, y)
-    return z
-```
-
-R code block:
-```r
-  library(tidyverse)
-  df <- read_csv("some_file.csv")
-  head(df)
-```
 
 here's some inline code `x+y`
 
