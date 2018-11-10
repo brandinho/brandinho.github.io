@@ -6,7 +6,6 @@ header:
   image: "/images/ML-banner.jpg"
 excerpt: "Reinforcement Learning, Neural Networks, Bayesian"
 mathjax: "true"
-comments: true
 ---
 
 ## Overview
@@ -107,3 +106,5 @@ Here's some math:
 $$z=x+y$$
 
 Here's some inline math $$z=x+y$$
+
+{% include disqus.html %}
