@@ -24,7 +24,7 @@ At the most basic level, the goal of RL is to learn a mapping from states to act
 
 The first thing to notice is that there is a feedback loop between the agent and the environment. For clarity, the agent refers to the AI that we are creating, while the environment refers to the world that the agent has to navigate through. In order to navigate through an environment, the agent has to take actions. The specific actions will depend on the domain - we will describe a few fairly soon. After the agent takes an action, it receives an observation of the environment (the current state) and a reward (assuming we don't have sparse rewards).
 
-After interacting with the environment for long enough, we hope that our agent learns how to take actions that maximize its cumulative reward over the long-term. It is important to realize that the best action in one state is not necessarily the best action in another state. So going back to our statement about mapping states to actions, this simply means that we want our agent to learn the best actions to take in each environment state. The function that maps states to actions is called a policy and is denoted as $$\pi(a \mid s)$$.
+After interacting with the environment for long enough, we hope that our agent learns how to take actions that maximize its cumulative reward over the long-term. It is important to realize that the best action in one state is not necessarily the best action in another state. So going back to our statement about mapping states to actions, this simply means that we want our agent to learn the best actions to take in each environment state. The function that maps states to actions is called a policy and is denoted as $$\pi(a \mid s)$$. Often times, $$\pi(a \mid s)$$ is read as "probability of taking action $$a$$, given we are in state $$s$$". However, just as a side note, your policy does not have to be defined probabilistically - you can define it deterministically as well.
 
 Now let's talk a bit about actions an agent can take. The first distinction I would like to make is between discrete actions and continuous actions. When we refer to discrete actions, we simply mean that there is a finite set of possible actions an agent can take. For example, in pong an agent can decide to move up or down. On the other hand, continuous actions have an infinite number of possibilities. An example of a continuous action, although kind of silly, is the hiding position of an agent if it is playing hide and seek.
 
@@ -46,7 +46,9 @@ The great thing about this architecture is that you can easily pass gradients th
 
 I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using `sns.kdeplot`, if anyone knows how to fix this, please let me know in the comments section!
 
-There are two things that I don't particularly like about this approach. The first is that it is possible to have multiple peaks in the distribution, as seen when the neural network is first initialized. I realize that as training went on, only one peak emerged. However, the fact that an agent can potentially learn such a distribution (with multiple peaks) makes me uncomfortable. If we go back to our example in the financial markets, an action of -1 will have the exact opposite reward of 1 (because it is the other side of the trade), so having peaks at both ends of the spectrum is quite confusing. I would much rather just have one peak near 0 with a large standard deviation if the agent is uncertain which action to take. The second is that it becomes overly optimistic in its decision when compared to a gaussian output (which we will see later), which could possibly indicate that it is understating the uncertainty.
+There are two things that I don't particularly like about this approach. The first is that it is possible to have multiple peaks in the distribution, as seen when the neural network is first initialized. I realize that as training went on, only one peak emerged. However, the fact that an agent can potentially learn such a distribution (with multiple peaks) makes me uncomfortable. If we go back to our example in the financial markets, an action of -1 will have the exact opposite reward of 1 (because it is the other side of the trade), so having peaks at both ends of the spectrum is quite confusing. I would much rather just have one peak near 0 with a large standard deviation if the agent is uncertain which action to take. The second is that it becomes overly optimistic in its decision when compared to a gaussian output (we will see this later), which could possibly indicate that it is understating the uncertainty.
+
+I will digress for a moment to state that a multimodal distribution (a distribution with multiple peaks) is not always bad. For example if you imagine an agent trying to navigate through a room and their policy dictates the angle at which they will move, then there could be two different angles that, while momentarily will send them in different directions, will ultimately lead them to the same end location. However, for this post, we will stick to the example in the financial markets, where a multimodal distribution doesn't make sense.
 
 Instead of using MC dropout, we can try using a normal distribution in the output and see if things improve. The architecture of our neural network now becomes:
 
@@ -115,9 +117,15 @@ Given the PDF for a normal distribution:
 
 $$p(\varepsilon) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{\varepsilon - \mu}{\sigma}\right)^2}$$
 
-Our truncated density now becomes:
+We will let $$F(\varepsilon)$$ denote our cumulative density function (CDF). Our truncated density now becomes:
 
-$$p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
+$$p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{F(U) - F(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
+
+The denominator, $$F(U) - F(L)$$, is the normalizing constant that allows the truncated density to integrate to 1. The reason we do this is because, as shown below, we are only sampling from a portion of $$p(\varepsilon)$$.
+
+{:refdef: style="text-align: center;"}
+![alt]({{ site.url }}{{ site.baseurl }}/images/truncated_distribution.png)
+{: refdef}
 
 You can import `scipy` and use the following function to generate samples from a truncated random normal distribution:
 
@@ -143,7 +151,11 @@ This distribution looks a lot nicer than both of the previous approaches, and ha
 
 ## Concluding Remarks
 
-Some conclusions
+In this post, we examined a few approaches to approximating a posterior distribution over our policy. Ultimately, we feel that using a neural network with a truncated normal policy is the best approach out of those examined. We learned how to reparameterize a truncated normal, which allows us to train the policy network using backpropagation. 
+
+## Acknowledgments
+
+I would like to thank [Alek Riley](https://www.linkedin.com/in/alek-riley-609073110/) for his feedback on how to improve the clarity of certain explanations.
 
 
 {% include disqus.html %}
