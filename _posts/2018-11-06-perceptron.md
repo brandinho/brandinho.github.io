@@ -117,7 +117,7 @@ $$p(\varepsilon) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{\vareps
 
 Our truncated density now becomes:
 
-$$p(\varepsilon \mid L \leq \verepsilon \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
+$$p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
 
 You can make use of `scipy` and use the following function to generate samples from a truncated random normal distribution:
 
