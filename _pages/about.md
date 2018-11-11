@@ -6,3 +6,5 @@ header:
 ---
 
 I'm a machine learning developer at OPTrust. I have a love for reinforcement learning and have recently acquired a passion for generative models.
+
+My motto: *My machine doesn't learn unless I do*
