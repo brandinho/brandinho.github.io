@@ -60,45 +60,63 @@ $$\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))$$
 
 ## Reparameterization Trick
 
-We want to update the policy network with backpropagation, but you'll notice that a random variable seems to be part of the computation graph. This poses a problem since we can't take the derivative of a random variable. In comes the reparameterization trick to save the day! By using this trick, we can move the random variable outside of the computation graph and then feed it in as a constant. Inference is the exact same, but now our neural network is differentiable.
+We want to update the policy network with backpropagation (similar to what we did with the MC dropout architecture), but you'll notice that we have a bit of a problem - a random variable is now part of the computation graph. This is a problem because backpropagation cannot flow through a random node. However, by using the reparameterization trick, we can move the random node outside of the computation graph and then feed in samples drawn from the distribution as constants. Inference is the exact same, but now our neural network can perform backpropagation.
 
-To do this, we define a random variable $$\epsilon$$, which does not depend on $$\theta$$. The new equation for generating our policy becomes:
+To do this, we define a random variable $$\varepsilon$$, which does not depend on $$\theta$$. The new equation for generating our policy becomes:
 
-$$\epsilon \sim \mathcal{N}(0,I)$$
+$$\varepsilon \sim \mathcal{N}(0,I)$$
 
-$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \epsilon$$
+$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \varepsilon$$
 
 Python code to take the random variable outside of the computation graph is shown below:
 
+```python
+  import tensorflow as tf
 
-## Novel Solution
+  policy_mu = tf.nn.tanh(tf.matmul(previous_layer, weights_mu) + bias_mu)
+  policy_sigma = tf.nn.softplus(tf.matmul(previous_layer, weights_sigma) + bias_sigma)                
 
-Present our novel solution to the problem. We will show empirically and prove mathematically that our approach is superior to the bayesian approximation.
+  epsilon = tf.random_normal(shape = tf.shape(policy_sigma), mean = 0, stddev = 1, dtype = tf.float32)
 
-Since we explicitly calculate the mean and standard deviation, we can plot both the histogram and the PDF of the truncated normal distribution as follows:
+  policy = tf.clip_by_value(policy_mu + policy_sigma * epsilon)
+```
+
+Now to get the neural network to work in a bounded space, we can clip outputs to be between -1 and 1. We simply change the last line of code in our network to:
 
 ```python
-  import matplotlib.pyplot as plt
-  import scipy.stats as stats
-
-  pdf_probs = stats.truncnorm.pdf(bayesian_policy, lower_bound, upper_bound, policy_mean, policy_std)
-
-  plt.hist(bayesian_policy, bins = 50, normed = True, alpha = 0.3, label = "Histogram")
-  plt.plot(bayesian_policy[bayesian_policy.argsort()], pdf_probs[bayesian_policy.argsort()], linewidth = 2.3, label = "PDF Curve")
-  plt.xlim(-1,1)
-  plt.legend(loc = 2)
-
-  plt.show()
+  policy = tf.clip_by_value(policy_mu + policy_sigma * epsilon, clip_value_min = -1, clip_value_max = 1)
 ```
+
+The resulting distribution is shown below:
 
 ![Alt Text](/images/clipped_posterior.gif)
 
-* Explain the challenge in clipping samples outside the bounds
-* Walk through reparameterization for the unbounded case
-* Expand it for our solution
+There is one obvious flaw in this approach - all of the clipped values get the value of either -1 or 1, which creates a very unbalanced distribution. To fix this, we will sample $$\varepsilon$$ from a truncated normal distribution.
+
+## Truncated Normal Solution
+
+Explain what a truncated normal is and how it works.
+
+To sample from the truncated normal, we have to define the lower bound and the upper bound. One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won't work if we want to use reparameterization. This is because the bounds apply to $$\varepsilon$$ and not $$\pi$$. Since we expand $$\varepsilon$$ by $$\sigma$$ and shift it by $$\mu$$, then applying bounds of -1 and 1 will result in a $$\pi$$ that extends beyond the bounds. To make this point more clear, let's say we defined our bounds $$-1 \leq \varepsilon \leq 1$$, and $$\mu = 0.5 , \quad \sigma = 1$$. Let's say you generate a sample $$\varepsilon = 0.9$$, then after you apply the transformation $$\mu + \sigma \times \varepsilon$$, you get $$\pi = 0.5 + 1 \times 0.9 = 1.4$$, which is beyond the upper bound.
+
+To generate the proper upper and lower bounds, we will use the equations below:
+
+$$L = \frac{-1 - \mu_{\theta}}{\sigma_{\theta}}$$
+
+$$U = \frac{1 - \mu_{\theta}}{\sigma_{\theta}}$$
+
+Using the proper $$L$$ and $$U$$ we can now reparameterize the neural network as follows:
+
+$$\varepsilon \sim \mathcal{N}_{TRUNC}(0,I; L, U)$$
+
+$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \varepsilon$$
 
 ![Alt Text](/images/posterior.gif)
 
+This distribution looks a lot nicer than both of the previous approaches, and has some nice properties:
+* It only has one peak at all times
+* Outputs do not need to be clipped
+* The policy doesn't look overly optimistic.
 
 ## Concluding Remarks
 
