@@ -62,7 +62,11 @@ $$\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))$$
 
 We want to update the policy network with backpropagation (similar to what we did with the MC dropout architecture), but you'll notice that we have a bit of a problem - a random variable is now part of the computation graph. This is a problem because backpropagation cannot flow through a random node. However, by using the reparameterization trick, we can move the random node outside of the computation graph and then feed in samples drawn from the distribution as constants. Inference is the exact same, but now our neural network can perform backpropagation.
 
-To do this, we define a random variable $$\varepsilon$$, which does not depend on $$\theta$$. The new equation for generating our policy becomes:
+To do this, we define a random variable $$\varepsilon$$, which does not depend on $$\theta$$. The new architecture becomes:
+
+{:refdef: style="text-align: center;"}
+![alt]({{ site.url }}{{ site.baseurl }}/images/gaussian_reparameterized.png)
+{: refdef}
 
 $$\varepsilon \sim \mathcal{N}(0,I)$$
 
