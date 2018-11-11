@@ -119,7 +119,7 @@ Our truncated density now becomes:
 
 $$p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
 
-You can make use of `scipy` and use the following function to generate samples from a truncated random normal distribution:
+You can import `scipy` and use the following function to generate samples from a truncated random normal distribution:
 
 ```python
   import scipy.stats as stats
