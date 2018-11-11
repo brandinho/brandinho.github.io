@@ -117,7 +117,7 @@ Given the PDF for a normal distribution:
 
 $$p(\varepsilon) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{\varepsilon - \mu}{\sigma}\right)^2}$$
 
-We will let $$F(\varepsilon)$$ denote our cumulative density function (CDF). Our truncated density now becomes:
+We will let $$F(\varepsilon)$$ denote our cumulative distribution function (CDF). Our truncated density now becomes:
 
 $$p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{F(U) - F(L)} \, \, \text{for} \, L \leq \varepsilon \leq U$$
 
@@ -151,7 +151,7 @@ This distribution looks a lot nicer than both of the previous approaches, and ha
 
 ## Concluding Remarks
 
-In this post, we examined a few approaches to approximating a posterior distribution over our policy. Ultimately, we feel that using a neural network with a truncated normal policy is the best approach out of those examined. We learned how to reparameterize a truncated normal, which allows us to train the policy network using backpropagation. 
+In this post, we examined a few approaches to approximating a posterior distribution over our policy. Ultimately, we feel that using a neural network with a truncated normal policy is the best approach out of those examined. We learned how to reparameterize a truncated normal, which allows us to train the policy network using backpropagation.
 
 ## Acknowledgments
 
