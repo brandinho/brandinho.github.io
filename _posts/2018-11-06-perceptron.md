@@ -72,7 +72,7 @@ $$\varepsilon \sim \mathcal{N}(0,I)$$
 
 $$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \varepsilon$$
 
-Python code to take the random variable outside of the computation graph is shown below:
+Python code to take the random variable outside of the computation graph is shown below (I'm only showing the relevant portion of the computation graph):
 
 ```python
   import tensorflow as tf
@@ -82,7 +82,7 @@ Python code to take the random variable outside of the computation graph is show
 
   epsilon = tf.random_normal(shape = tf.shape(policy_sigma), mean = 0, stddev = 1, dtype = tf.float32)
 
-  policy = tf.clip_by_value(policy_mu + policy_sigma * epsilon)
+  policy = policy_mu + policy_sigma * epsilon
 ```
 
 Now to get the neural network to work in a bounded space, we can clip outputs to be between -1 and 1. We simply change the last line of code in our network to:
@@ -95,13 +95,13 @@ The resulting distribution is shown below:
 
 ![Alt Text](/images/clipped_posterior.gif)
 
-There is one obvious flaw in this approach - all of the clipped values get the value of either -1 or 1, which creates a very unbalanced distribution. To fix this, we will sample $$\varepsilon$$ from a truncated normal distribution.
+There is one obvious flaw in this approach - all of the clipped values get a value of either -1 or 1, which creates a very unbalanced distribution. To fix this, we will sample $$\varepsilon$$ from a truncated normal distribution.
 
 ## Truncated Normal Solution
 
 Explain what a truncated normal is and how it works.
 
-To sample from the truncated normal, we have to define the lower bound and the upper bound. One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won't work if we want to use reparameterization. This is because the bounds apply to $$\varepsilon$$ and not $$\pi$$. Since we expand $$\varepsilon$$ by $$\sigma$$ and shift it by $$\mu$$, then applying bounds of -1 and 1 will result in a $$\pi$$ that extends beyond the bounds. To make this point more clear, let's say we defined our bounds $$-1 \leq \varepsilon \leq 1$$, and $$\mu = 0.5 , \quad \sigma = 1$$. Let's say you generate a sample $$\varepsilon = 0.9$$, then after you apply the transformation $$\mu + \sigma \times \varepsilon$$, you get $$\pi = 0.5 + 1 \times 0.9 = 1.4$$, which is beyond the upper bound.
+To sample from the truncated normal, we have to define the lower bound and the upper bound. One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won't work if we want to use reparameterization. This is because the bounds apply to $$\varepsilon$$ and not $$\pi$$. Since we expand $$\varepsilon$$ by $$\sigma$$ and shift it by $$\mu$$, then applying bounds of -1 and 1 will result in a $$\pi$$ that extends beyond the bounds. To make this point more clear, let's say we defined our bounds $$-1 \leq \varepsilon \leq 1$$, and $$\mu = 0.5 , \, \sigma = 1$$. If we generate a sample $$\varepsilon = 0.9$$, then after you apply the transformation $$\mu + \sigma \times \varepsilon$$, you get $$\pi = 0.5 + 1 \times 0.9 = 1.4$$, which is beyond the upper bound.
 
 To generate the proper upper and lower bounds, we will use the equations below:
 
