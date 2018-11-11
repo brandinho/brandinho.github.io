@@ -111,7 +111,11 @@ $$U = \frac{1 - \mu_{\theta}}{\sigma_{\theta}}$$
 
 Using our previous example, $$U = 0.5$$, which means that the largest $$\varepsilon$$ we can sample is 0.5. Plugging this into our reparameterized equation, we see that the largest $$\pi$$ we can sample is 1. Similarly, $$L = -1.5$$, which means that the lowest $$\pi$$ we can sample is -1. Perfect, we figured it out! Using the proper $$L$$ and $$U$$ we can now reparameterize the neural network as follows:
 
-$$\varepsilon \sim \mathcal{N}(0,I), \quad \text{if} \, \, L \leq \varepsilon \leq U$$
+$$\varepsilon \sim \mathcal{N}(0,I), \quad p(x) = \frac{1}{\sigma\sqrt{2\pi}}\e^{-\frac{1}{2}\left(\frac{x - \mu}{\sigma}\right)^2}$$
+
+$$p(x \mid L < x < U) \rightarrow \text{Truncated Normal}$$
+
+$$\frac{p(x)}{p(U) - p(L)} \cdot I(L < x < U)$$
 
 $$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \varepsilon$$
 
