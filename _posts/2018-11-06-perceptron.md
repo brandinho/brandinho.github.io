@@ -48,19 +48,23 @@ I omitted a kernel density estimation (KDE) plot on top of the histogram because
 
 There are two things that I don't particularly like about this approach. The first is that it is possible to have multiple peaks in the distribution, as seen when the neural network is first initialized. I realize that as training went on, only one peak emerged. However, the fact that an agent can potentially learn such a distribution (with multiple peaks) makes me uncomfortable. If we go back to our example in the financial markets, an action of -1 will have the exact opposite reward of 1 (because it is the other side of the trade), so having peaks at both ends of the spectrum is quite confusing. I would much rather just have one peak near 0 with a large standard deviation if the agent is uncertain which action to take. The second is that it becomes overly optimistic in its decision when compared to a gaussian output (demonstrated below), which could possibly indicate that it is understating the uncertainty.
 
-Great, so that's the solution - let's use a normal distribution in the output!
+Great, so that's the solution - let's use a normal distribution in the output! We can structure our neural network to have the architecture below:
 
-## Reparameterization Trick
+{:refdef: style="text-align: center;"}
+![alt]({{ site.url }}{{ site.baseurl }}/images/gaussian_output.png)
+{: refdef}
 
-You might be thinking that it doesn't make sense to have a normal distribution as the output since you can't take the derivative of a random variable. You are correct, but we can apply the reparameterization trick to move the random variable outside of the neural network. If our neural network parameters are denoted by $$\theta$$, then we can define $$\mu_{\theta}$$ and $$\sigma_{\theta}$$ as outputs of the neural network, such that:
+If our neural network parameters are denoted by $$\theta$$, then we can define $$\mu_{\theta}$$ and $$\sigma_{\theta}$$ as outputs of the neural network, such that:
 
 $$\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))$$
 
-However, if we want to use backpropagation, we have to make the whole computational graph differentiable. We can do this by defining $$\epsilon$$, which does not depend on $$\theta$$. So now, gradients can flow through the entire graph without passing through the random variable:
+## Reparameterization Trick
 
-$$\epsilon \sim \mathcal{N}(0,I)$$
+We want to update the policy network with backpropagation, but you'll notice that a random variable seems to be part of the computation graph. This poses a problem since we can't take the derivative of a random variable. In comes the reparameterization trick to save the day! By using this trick, we can move the random variable outside of the computation graph and then feed it in as a constant. Inference is the exact same, but now our neural network is differentiable.
 
-$$\pi = \mu_{\theta} + \sigma_{\theta} \times \epsilon$$
+To do this, we define a random variable $$\epsilon$$, which does not depend on $$\theta$$. The new equation for generating our policy becomes:
+
+$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \epsilon , \quad \epsilon \sim \mathcal{N}(0,I)$$
 
 Python code to take the random variable outside of the computation graph is shown below:
 
@@ -69,7 +73,7 @@ Python code to take the random variable outside of the computation graph is show
 
 Present our novel solution to the problem. We will show empirically and prove mathematically that our approach is superior to the bayesian approximation.
 
-Since we actually know the mean and standard deviation of the distribution, we can plot both the histogram and the PDF as follows:
+Since we explicitly calculate the mean and standard deviation, we can plot both the histogram and the PDF of the truncated normal distribution as follows:
 
 ```python
   import matplotlib.pyplot as plt
