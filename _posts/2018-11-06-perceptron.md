@@ -109,9 +109,9 @@ $$L = \frac{-1 - \mu_{\theta}}{\sigma_{\theta}}$$
 
 $$U = \frac{1 - \mu_{\theta}}{\sigma_{\theta}}$$
 
-Using the proper $$L$$ and $$U$$ we can now reparameterize the neural network as follows:
+Using our previous example, $$U = 0.5$$, which means that the largest $$\varepsilon$$ we can sample is 0.5. Plugging this into our reparameterized equation, we see that the largest $$\pi$$ we can sample is 1. Similarly, $$L = -1.5$$, which means that the lowest $$\pi$$ we can sample is -1. Perfect, we figured it out! Using the proper $$L$$ and $$U$$ we can now reparameterize the neural network as follows:
 
-$$\varepsilon \sim \mathcal{N}_{TRUNC}(0,I; L, U)$$
+$$\varepsilon \sim \mathcal{N}(0,I), \, \text{if} L \leq \varepsilon \leq U$$
 
 $$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \varepsilon$$
 
