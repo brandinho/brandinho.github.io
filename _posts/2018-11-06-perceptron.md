@@ -101,7 +101,7 @@ There is one obvious flaw in this approach - all of the clipped values get a val
 
 A truncated normal distribution is similar to a normal distribution, in that it is defined by a mean ($$\mu$$) and standard deviation ($$\sigma$$). However, the key distinction is that the distribution's range is limited to be within a lower and upper bound. Typically the lower bound is denoted by $$a$$ and the upper bound is denoted by $$b$$, but I'm going to use $$L$$ and $$U$$ because I think it is easier to follow.
 
-One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won't work if we want to use reparameterization. This is because the bounds apply to $$\varepsilon$$ and not $$\pi$$. Since we expand $$\varepsilon$$ by $$\sigma$$ and shift it by $$\mu$$, then applying bounds of -1 and 1 will result in a $$\pi$$ that extends beyond the bounds. To make this point more clear, let's say we defined our bounds $$-1 \leq \varepsilon \leq 1$$, and $$\mu = 0.5 , \, \sigma = 1$$. If we generate a sample $$\varepsilon = 0.9$$, then after you apply the transformation $$\mu + \sigma \times \varepsilon$$, you get $$\pi = 0.5 + 1 \cdot 0.9 = 1.4$$, which is beyond the upper bound.
+One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won't work if we want to use reparameterization. This is because the bounds apply to $$\varepsilon$$ and not $$\pi$$. Since we expand $$\varepsilon$$ by $$\sigma$$ and shift it by $$\mu$$, then applying bounds of -1 and 1 will result in a $$\pi$$ that extends beyond the bounds. To make this point more clear, let's say we defined our bounds $$-1 \leq \varepsilon \leq 1$$, and $$\mu = 0.5 , \, \sigma = 1$$. If we generate a sample $$\varepsilon = 0.9$$, then after you apply the transformation $$\mu + \sigma \cdot \varepsilon$$, you get $$\pi = 0.5 + 1 \cdot 0.9 = 1.4$$, which is beyond the upper bound.
 
 To generate the proper upper and lower bounds, we will use the equations below:
 
@@ -109,7 +109,7 @@ $$L = \frac{-1 - \mu_{\theta}}{\sigma_{\theta}}$$
 
 $$U = \frac{1 - \mu_{\theta}}{\sigma_{\theta}}$$
 
-Using our previous example, $$U = 0.5$$, which means that the largest $$\varepsilon$$ we can sample is 0.5. Plugging this into our reparameterized equation, we see that the largest $$\pi$$ we can sample is 1. Similarly, $$L = -1.5$$, which means that the lowest $$\pi$$ we can sample is -1. Perfect, we figured it out!
+Using our previous example, we find that $$U = 0.5$$, which means that the largest $$\varepsilon$$ we can sample is 0.5. Plugging this into our reparameterized equation, we see that the largest $$\pi$$ we can generate is 1. Similarly, $$L = -1.5$$, which means that the lowest $$\pi$$ we can generate is -1. Perfect, we figured it out!
 
 Given the PDF for a normal distribution:
 
@@ -117,7 +117,7 @@ $$p(\varepsilon) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{\vareps
 
 Our truncated density now becomes:
 
-$$p(\varepsilon \mid L \leq x \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq x \leq U$$
+$$p(\varepsilon \mid L \leq \verepsilon \leq U) = \frac{p(\varepsilon)}{p(U) - p(L)} \, \, \text{for} \, L \leq x \leq U$$
 
 You can make use of `scipy` and use the following function to generate samples from a truncated random normal distribution:
 
