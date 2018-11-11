@@ -64,7 +64,9 @@ We want to update the policy network with backpropagation, but you'll notice tha
 
 To do this, we define a random variable $$\epsilon$$, which does not depend on $$\theta$$. The new equation for generating our policy becomes:
 
-$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \epsilon , \quad \epsilon \sim \mathcal{N}(0,I)$$
+$$\epsilon \sim \mathcal{N}(0,I)$$
+
+$$\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \times \epsilon$$
 
 Python code to take the random variable outside of the computation graph is shown below:
 
