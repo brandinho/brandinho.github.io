@@ -131,7 +131,7 @@ The denominator, $$F(U) - F(L)$$, is the normalizing constant that allows the tr
 ![alt]({{ site.url }}{{ site.baseurl }}/images/truncated_distribution.png)
 {: refdef}
 
-You can import `scipy` and use the following function to generate samples from a truncated random normal distribution:
+You can import `scipy` and use the following function to generate samples from a truncated normal distribution:
 
 ```python
   import scipy.stats as stats
