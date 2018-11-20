@@ -167,7 +167,7 @@ Even though I remained relatively simple with my implementation, you can get a b
 Another method you can implement is the **Inversion** mutation, which selects two random positions and inverts/reverses the substring of genes between them:
 
 {:refdef: style="text-align: center;"}
-![alt]({{ site.url }}{{ site.baseurl }}/images/inversion_mutation.png)
+![alt]({{ site.url }}{{ site.baseurl }}/images/inversion_mutation.png){: style="max-width: 300px; height: auto;"}
 {: refdef}
 
 ```python
@@ -179,7 +179,7 @@ Another method you can implement is the **Inversion** mutation, which selects tw
 Lastly, you can implement the **Scramble** mutation, which selects two random positions and scrambles the positions of the genes within them:
 
 {:refdef: style="text-align: center;"}
-![alt]({{ site.url }}{{ site.baseurl }}/images/scramble_mutation.png)
+![alt]({{ site.url }}{{ site.baseurl }}/images/scramble_mutation.png){: style="max-width: 300px; height: auto;"}
 {: refdef}
 
 ```python
