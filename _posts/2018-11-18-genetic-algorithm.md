@@ -155,7 +155,7 @@ Similar to crossover, there are multiple ways to perform mutation. For my implem
 Even though I remained relatively simple with my implementation, you can get a bit fancier by implementing some of the mutation methods outlined below. The first is the **Swap** mutation, which selects two random positions in the chromosome and swaps their genes:
 
 {:refdef: style="text-align: center;"}
-![alt]({{ site.url }}{{ site.baseurl }}/images/swap_mutation.png){:height: "100px" width: "500px"}
+![alt]({{ site.url }}{{ site.baseurl }}/images/swap_mutation.png){:height: "40px" width: "250px"}
 {: refdef}
 
 ```python
@@ -205,7 +205,7 @@ When the training process starts (Generation 1), we see that the cheetah doesn't
 ![Alt Text](/images/cheetah_start.gif)
 {: refdef}
 
-As training progresses (Generation 250), the cheetah learns how to run forwards. However, we see that near the end of the episode it loses control of its stride and falls flat on its face:
+As training progresses (Generation 250), the cheetah learns how to run forward. However, we see that near the end of the episode it loses control of its stride and falls flat on its face:
 
 {:refdef: style="text-align: center;"}
 ![Alt Text](/images/cheetah_mid.gif)
