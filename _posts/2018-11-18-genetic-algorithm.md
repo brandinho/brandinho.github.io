@@ -18,7 +18,7 @@ When most people think of Deep Reinforcement Learning, they probably think of Q-
 
 Genetic algorithms (GAs) are inspired by natural selection, as put forth by Charles Darwin. The idea is that over generations, the heritable traits of a population change because of *mutation* and the concept of *survival of the fittest*.
 
-Similar to natural selection, GAs iterate over multiple generations to evolve a population. The population in our case is going to consist of a bunch of neural network weights, which define our cheetah and walker agents. You can think of each set of neural network weights as an individual in the population - usually called a chromosome or genotype. Chromosomes are usually encoded as binary strings, but since we want to optimize neural networks weights, we will adapt it for continuous numbers. Each neural network weight in our chromosome can be referred to as a gene. After iterating through all the generations, we want our the chromosomes to be optimized such that the agents will be able to run!
+Similar to natural selection, GAs iterate over multiple generations to evolve a population. The population in our case is going to consist of a bunch of neural network weights, which define our cheetah agents. You can think of each set of neural network weights as an individual agent in the population - usually called a chromosome or genotype. Chromosomes are usually encoded as binary strings, but since we want to optimize neural networks weights, we will adapt it for continuous numbers. Each neural network weight in our chromosome can be referred to as a gene. After iterating through all the generations, we want our the chromosomes to be optimized such that the cheetah agents will be able to run!
 
 ### Initialization
 
