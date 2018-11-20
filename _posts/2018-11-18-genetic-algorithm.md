@@ -22,11 +22,11 @@ Similar to natural selection, GAs iterate over multiple generations to evolve a 
 
 ### Initialization
 
-To begin the process, we need to initialize our population of agents. We define a scaling factor, which is simply the standard deviation of the normal distribution we want to sample from for our neural network weights. We use the initialization method outlined in [Glorot and Bengio's paper](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf):
+To begin the process, we need to initialize our population of agents. We sample the initial neural network weights from a normal distribution with a scaling factor outlined outlined in [Glorot and Bengio's paper](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf):
 
 $$Var[W^i] = \frac{2}{n_i + n_{i+1}}$$
 
-where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while $$n_i$$ and $$n_{i+1}$$ refer to the input and output dimensionality of that layer. Below you'll see python code to implement the population initialization, where `scaling_factor` is a vector of standard deviations calculated as $$\sqrt{Var[W^i]}$$:
+where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while $$n_i$$ and $$n_{i+1}$$ refer to the input and output dimensionality of that layer. Below you'll see python code to implement the population initialization, where `scaling_factor` is a vector of variances calculated according to the equation above:
 
 ```python
   population = np.random.multivariate_normal(mean = [0]*scaling_factor.shape[0],
