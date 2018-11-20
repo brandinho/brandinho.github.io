@@ -36,7 +36,7 @@ where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while $$
 
 ### Selection
 
-Now that we have a population, we can have them compete against each other! The agents that are the most "fit" have the highest probability of passing their genes onto the next generation. We will define fitness as the cumulative reward of our agent over the span of an episode. As you might have guessed by the way we defined it, fitness refers to how good an agent is at performing the task we want it to learn. Those that are better at performing the task will have better chances of being selected as parents to breed a new generation. There are two primary methods for parent selection - **Roulette** and **Tournament**.
+Now that we have a population, we can have them compete against each other! The agents that are the most "fit" have the highest probability of passing their genes onto the next generation. We will define fitness as the cumulative reward of our agent over the span of an episode. As you might have guessed by the way we defined it, fitness refers to how good an agent is at performing the task we want it to learn. Those that are better at performing the task will have a better chance of being selected as parents to breed a new generation. There are two primary methods for parent selection - **Roulette** and **Tournament**.
 
 The roulette method selects parents with a probability proportional to their fitness score. This is why it is also called *Fitness Proportionate Selection*.
 
