@@ -26,7 +26,7 @@ To begin the process, we need to initialize our population of agents. We define 
 
 $$Var[W^i] = \frac{2}{n_i + n_{i+1}}$$
 
-where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while n_i and n_{i+1} refer to the input and output dimensionality of that layer. Below you'll see python code to implement the population initialization, where `scaling_factor` is a vector of standard deviations calculated as $$\sqrt{Var[W^i]}$$:
+where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while $$n_i$$ and $$n_{i+1}$$ refer to the input and output dimensionality of that layer. Below you'll see python code to implement the population initialization, where `scaling_factor` is a vector of standard deviations calculated as $$\sqrt{Var[W^i]}$$:
 
 ```python
   population = np.random.multivariate_normal(mean = [0]*scaling_factor.shape[0],
