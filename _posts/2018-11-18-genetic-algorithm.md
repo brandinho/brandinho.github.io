@@ -8,8 +8,6 @@ excerpt: "Reinforcement Learning, Neural Networks, Genetic Algorithm"
 mathjax: "true"
 ---
 
-CURRENTLY A WORK IN PROGRESS
-
 ## Overview
 
 When most people think of Deep Reinforcement Learning, they probably think of Q-networks or policy gradients. Both of these methods require you to calculate derivatives and use gradient descent. In this post, we are going to explore a derivative-free method for optimizing a policy network. Specifically, we are going to be using a genetic algorithm on DeepMind's [Control Suite](https://arxiv.org/pdf/1801.00690.pdf) to allow the "cheetah" physical model to learn how to run. You can find the complete code on my [github repo](https://github.com/brandinho/Genetic-Algorithm-Control-Suite).
@@ -197,7 +195,7 @@ The thing that I really like about this library is that it has a standardized st
 
 $$r(v) = max􏰀(0, min(v/10, 1))􏰁$$
 
-We run each episode for 500 frames and calculate the fitness, $$f$$, as
+We run each episode for 500 frames and calculate the fitness, $$f$$, as:
 
 $$f = \sum_{i=1}^{500}r_i$$
 
