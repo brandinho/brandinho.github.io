@@ -224,3 +224,5 @@ Awesome, we did it!
 ## Concluding Remarks
 
 In this post we learned how genetic algorithms can be used to optimize parameters of a neural network for a continuous control task. In a future post we will explore an application where we mix genetic algorithms (derivative-free method) and policy gradients (derivative-based method) for better training.
+
+{% include disqus.html %}
