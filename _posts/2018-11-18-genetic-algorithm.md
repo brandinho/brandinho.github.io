@@ -193,7 +193,7 @@ Great, now that we have all the pieces to make a genetic algorithm, let's put th
 
 The thing that I really like about this library is that it has a standardized structure. For example, the library provides you with an observation of the environment and a reward for every action you take. The state observation for our domain task is a combination of the cheetah's position and velocity. The reward, $$r$$, is a function of the forward velocity, $$v$$, up to a maximum of $$10 m/s$$:
 
-$$r(v) = max􏰀(0, min(v/10, 1))􏰁$$
+$$r(v) = max(0, min(v/10, 1))$$
 
 We run each episode for 500 frames and calculate the fitness, $$f$$, as:
 
