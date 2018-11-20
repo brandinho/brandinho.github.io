@@ -109,7 +109,7 @@ Building on the previous method is **Two Point** crossover. This is conceptually
       child[lower_limit:upper_limit+1] = parent_1[lower_limit:upper_limit+1]
 ```
 
-Unlike the previous two methods, which required the swapped genes to be in a sequence, the **Uniform** crossover does not. Rather, it randomly selects, with uniform distribution, the indexes to be swapped during crossover.
+Unlike the previous two methods, which required the swapped genes to be in a sequence, the **Uniform** crossover does not. Rather, it randomly selects, with a uniform distribution, the indexes to be swapped during crossover.
 
 {:refdef: style="text-align: center;"}
 ![alt]({{ site.url }}{{ site.baseurl }}/images/uniform_crossover.png)
