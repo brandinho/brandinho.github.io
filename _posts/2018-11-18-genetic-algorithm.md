@@ -193,7 +193,11 @@ Lastly, you can implement the **Scramble** mutation, which selects two random po
 
 Great, now that we have all the pieces to make a genetic algorithm, let's put them together to train the "cheetah" domain from DeepMind's Control Suite. For those who are not familiar with the library, it is powered by the MuJoCo physics engine and provides you with an environment to train agents on a set of continuous control tasks. For our experiment we want the cheetah to learn how to run.
 
-The thing that I really like about this library is that it has a standardized structure. For example, the library provides you with an observation of the environment and a reward for every action you take. The state observation for our domain task is a combination of the cheetah's position and velocity. The reward, $$r$$ a function of the forward velocity $$v$$, up to a maximum of $$10_{m/s}$$: $$r(v) = max􏰀(0, min(v/10, 1))􏰁$$. We run each episode for 500 frames and calculate the fitness, $$f$$, as
+The thing that I really like about this library is that it has a standardized structure. For example, the library provides you with an observation of the environment and a reward for every action you take. The state observation for our domain task is a combination of the cheetah's position and velocity. The reward, $$r$$, is a function of the forward velocity, $$v$$, up to a maximum of $$10 m/s$$:
+
+$$r(v) = max􏰀(0, min(v/10, 1))􏰁$$
+
+We run each episode for 500 frames and calculate the fitness, $$f$$, as
 
 $$f = \sum_{i=1}^{500}r_i$$
 
