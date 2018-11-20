@@ -201,15 +201,21 @@ At each time step, our agent has to make 6 actions in parallel - the movement of
 
 When the training process starts (Generation 1), we see that the cheetah doesn't know how to move and end up falling backwards:
 
+{:refdef: style="text-align: center;"}
 ![Alt Text](/images/cheetah_start.gif)
+{: refdef}
 
 As training progresses (Generation 250), the cheetah learns how to run forwards. However, we see that near the end of the episode it loses control of its stride and falls flat on its face:
 
+{:refdef: style="text-align: center;"}
 ![Alt Text](/images/cheetah_mid.gif)
+{: refdef}
 
 At the end of the training process (Generation 1000), we see that the cheetah learns how to run, while also maintaining its center of gravity during large strides:
 
+{:refdef: style="text-align: center;"}
 ![Alt Text](/images/cheetah_end.gif)
+{: refdef}
 
 Awesome, we did it!
 
