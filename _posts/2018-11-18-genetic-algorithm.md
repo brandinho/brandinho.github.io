@@ -154,8 +154,8 @@ Similar to crossover, there are multiple ways to perform mutation. For my implem
 
 Even though I remained relatively simple with my implementation, you can get a bit fancier by implementing some of the mutation methods outlined below. The first is the **Swap** mutation, which selects two random positions in the chromosome and swaps their genes:
 
-{:refdef: style="text-align: center; max-width: 20px; height: auto;"}
-![alt]({{ site.url }}{{ site.baseurl }}/images/swap_mutation.png)
+{:refdef: style="text-align: center;"}
+![alt]({{ site.url }}{{ site.baseurl }}/images/swap_mutation.png){: style="max-width: 50px; height: auto;"}
 {: refdef}
 
 ```python
