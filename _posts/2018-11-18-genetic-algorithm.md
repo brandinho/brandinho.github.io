@@ -12,7 +12,7 @@ CURRENTLY A WORK IN PROGRESS
 
 ## Overview
 
-When most people think of Deep Reinforcement Learning, they probably think of Q-networks or policy gradients. Both of these methods require you to calculate derivatives and use gradient descent. In this post, we are going to explore a derivative-free method for optimizing a policy network. Specifically, we are going to be using a genetic algorithm on DeepMind's [Control Suite](https://arxiv.org/pdf/1801.00690.pdf) to allow the "cheetah" physical model to learn how to run. You can find the complete code on my [github account](https://github.com/brandinho).
+When most people think of Deep Reinforcement Learning, they probably think of Q-networks or policy gradients. Both of these methods require you to calculate derivatives and use gradient descent. In this post, we are going to explore a derivative-free method for optimizing a policy network. Specifically, we are going to be using a genetic algorithm on DeepMind's [Control Suite](https://arxiv.org/pdf/1801.00690.pdf) to allow the "cheetah" physical model to learn how to run. You can find the complete code on my [github account](https://github.com/brandinho/Genetic-Algorithm-Control-Suite).
 
 ## Genetic Algorithm Background
 
