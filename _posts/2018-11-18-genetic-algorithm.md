@@ -22,7 +22,7 @@ Similar to natural selection, GAs iterate over multiple generations to evolve a 
 
 ### Initialization
 
-To begin the process, we need to initialize our population of agents. We sample the initial neural network weights from a normal distribution with a scaling factor outlined outlined in [Glorot and Bengio's paper](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf):
+To begin the process, we need to initialize our population of agents. We sample the initial neural network weights from a normal distribution with a scaling factor outlined in [Glorot and Bengio's paper](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf):
 
 $$Var[W^i] = \frac{2}{n_i + n_{i+1}}$$
 
@@ -36,7 +36,7 @@ where $$W^i$$ refers to the weight matrix in the $$i^\text{th}$$ layer, while $$
 
 ### Selection
 
-Now that we have a population, we can have them compete against each other! The agents that are the most "fit" have the highest probability of passing their genes onto the next generation. We will define fitness as the cumulative reward of our agent over the span of an episode. As you might have guessed by the way we defined it, fitness refers to how good an agent is at performing the task we want it to learn. Those that are better at performing the task will be more likely to be selected as parents to breed a new generation. There are two primary methods for parent selection - **Roulette** and **Tournament**.
+Now that we have a population, we can have them compete against each other! The agents that are the most "fit" have the highest probability of passing their genes onto the next generation. We will define fitness as the cumulative reward of our agent over the span of an episode. As you might have guessed by the way we defined it, fitness refers to how good an agent is at performing the task we want it to learn. Those that are better at performing the task will have better chances of being selected as parents to breed a new generation. There are two primary methods for parent selection - **Roulette** and **Tournament**.
 
 The roulette method selects parents with a probability proportional to their fitness score. This is why it is also called *Fitness Proportionate Selection*.
 
