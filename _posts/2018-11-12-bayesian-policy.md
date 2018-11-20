@@ -1,6 +1,6 @@
 ---
 title: "Learning Probability Distributions in Bounded Action Spaces"
-date: 2018-11-07
+date: 2018-11-12
 tags: [Reinforcement Learning, Bayesian, Reparameterization]
 header:
   image: "/images/ML-banner.jpg"
