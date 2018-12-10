@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2018-12-10T00:24:48-05:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Brandon Da Silva</title><subtitle>Machine Learning Blog</subtitle><author><name>Brandon Da Silva</name><email>brandasilva9@gmail.com</email></author><entry><title type="html">Playing Super Mario Bros with Proximal Policy Optimization</title><link href="http://localhost:4000/mario-ppo/" rel="alternate" type="text/html" title="Playing Super Mario Bros with Proximal Policy Optimization" /><published>2018-12-02T00:00:00-05:00</published><updated>2018-12-02T00:00:00-05:00</updated><id>http://localhost:4000/mario-ppo</id><content type="html" xml:base="http://localhost:4000/mario-ppo/">&lt;h2 id=&quot;overview&quot;&gt;Overview&lt;/h2&gt;
+
+&lt;p&gt;In this post, our AI agent will learn how to play Super Mario Bros by using Proximal Policy Optimization (PPO). We want our agent to learn how to play by only observing the raw game pixels so we use convolutional layers early in the network, followed by dense layers to get our policy and state-value output. The architecture of our model is shown below.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/mario-model-architecture.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Code is not yet available, but I will post it on github sometime this week.&lt;/p&gt;
+
+&lt;p&gt;Throughout this post, I’m going to explain each of the model’s components. First we start with the convolutional layers.&lt;/p&gt;
+
+&lt;h2 id=&quot;convolutional-neural-network&quot;&gt;Convolutional Neural Network&lt;/h2&gt;
+
+&lt;p&gt;Convolutional neural networks (CNNs) are widely used in image recognition, and have achieved very impressive results to date. They have their own set of issues, such as the inability to take important spatial hierarchies into account, which &lt;a href=&quot;https://arxiv.org/pdf/1710.09829.pdf&quot;&gt;capsule networks&lt;/a&gt; attempt to address. However, we don’t think that this significantly impacts an agent’s ability to play a video game from raw pixels so convolutional layers will be just fine for our algorithm.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately I’m not going to fully explain CNNs because that would take a whole post on its own. Rather, I’m going to explain some of the most important concepts for our model. If you want a more detailed explanation, I highly recommend &lt;a href=&quot;https://colah.github.io&quot;&gt;Chrisopher Olah’s blog&lt;/a&gt; - all his posts are incredible. Also &lt;a href=&quot;https://www.coursera.org/learn/convolutional-neural-networks&quot;&gt;Andrew Ng’s course&lt;/a&gt; is awesome!&lt;/p&gt;
+
+&lt;p&gt;The first thing to understand is that every image is comprised of pixels, and every pixel is represented as a numerical value (or combination of values). The images from the game screen use the RGB color model, which means that for each pixel in the picture, there are going to be 3 numbers associated with it. The numbers correspond to how much red, green, and blue light to add to the image. An example of the RGB codes for the Mario picture are shown below:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/mario-color-codes.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Okay great, now what do we do with these pixel values? Convolutional layers are a great way to deal with raw pixel inputs into a neural network. Each convolutional layers consists of multiple filters, which extract important information about an image. You can think of each convolutional layer as a building block for the next. For example, the first layer can put together the pixels to form edges, the second layer can put together the edges to form shapes, the third layer can put the shapes together to form objects, etc.&lt;/p&gt;
+
+&lt;p&gt;The filters work by performing an operation called convolution, shown in the image below. The operation works by taking the sum of the element-wise product between a portion of the image and the filter (also called a kernel). It focuses on a portion of the image because we need the two matrices to be the same size. In our example, we perform convolution on the bottom-right portion of the image. The filter shown below is specifically designed to detect vertical edges in an image. However, in practice we don’t preset the filter weights to perform a specific task - instead the neural network will learn the weights that it deems the best with backpropagation.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/convolution-operation.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I know I said that the operation being performed above is convolution, but that is not completely true… We’re technically performing cross-correlation, but everyone refers to this operation in the neural network context as convolution. Let me explain why. To actually perform convolution, you need to either flip the source image or the kernel. The reason why we don’t do this for CNNs is because it adds unnecessary complexity. Why is it unnecessary? Because the neural network learns the weights for the kernel anyways, so if you needed to flip the kernel, the CNN will automatically learn the flipped kernel weights, making the actual flipping pointless. Since flipping does not make a difference, cross-correlation is equivalent to convolution in this context.&lt;/p&gt;
+
+&lt;p&gt;As mentioned before, the kernel is applied to a portion of the image, so we have to slide the kernel over the whole image to account for all the portions. Below we show an example of the filter in action! We used some different numbers - they don’t actually mean anything, I just made them up:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/images/ConvNet.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The last concept that I want to introduce for CNNs is stride. The stride determines how many pixels the filter jumps over between convolution operations. For example, in our animation above, the stride was 1 because it moved one pixel at a time. But if we specify a stride of 2, then it will move two pixels at a time (skipping over one pixel). The larger the stride, the smaller the output from the convolutional layer. Below we show what a stride of 2 looks like for the same input and kernel:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/images/ConvNet2.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Now that we understand how the neural network is able to deal with pixelated inputs, we will move onto the feed-forward (dense) portion of our model - it splits into a value estimation stream and a policy stream.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-value-function&quot;&gt;The Value Function&lt;/h2&gt;
+
+&lt;p&gt;In reinforcement learning, we often care about value functions - specifically, the state-value function &lt;script type=&quot;math/tex&quot;&gt;V(s)&lt;/script&gt; and the action-value function &lt;script type=&quot;math/tex&quot;&gt;Q(s,a)&lt;/script&gt;. Before diving into some math, I want to explain these concepts intuitively. &lt;script type=&quot;math/tex&quot;&gt;V(s)&lt;/script&gt; tells us how good it is to be in a particular state. In Super Mario Bros, the goal is to go all the way to the right side of the map, as fast as possible. Thus, we get a positive (negative) reward if we move to the right (left), while getting a negative reward every time the clock ticks. Let’s let M1 and M2 represent two of Mario’s possible positions. If we define &lt;script type=&quot;math/tex&quot;&gt;V(s)&lt;/script&gt; as the expectation of &lt;script type=&quot;math/tex&quot;&gt;G_t&lt;/script&gt;, which is the cumulative discounted reward from time step &lt;script type=&quot;math/tex&quot;&gt;t&lt;/script&gt;, then we realize that &lt;script type=&quot;math/tex&quot;&gt;V(s_{M2}) &gt; V(s_{M1})&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/mario-value.png&quot; alt=&quot;alt&quot; style=&quot;max-width: 300px; height: auto;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;If my previous statement did not completely make sense, let’s make it a bit more concrete with some math. Let’s let &lt;script type=&quot;math/tex&quot;&gt;R_t&lt;/script&gt; represent the reward from time step &lt;script type=&quot;math/tex&quot;&gt;t&lt;/script&gt;. We will define the cumulative discounted reward from time step &lt;script type=&quot;math/tex&quot;&gt;t&lt;/script&gt; as:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \ldots = \sum_{k=0}^{\infty} \gamma^kR_{t+k+1}&lt;/script&gt;
+
+&lt;p&gt;where &lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; is a discount factor that we apply to future rewards. This is a math trick that makes an infinite sum finite since &lt;script type=&quot;math/tex&quot;&gt;0 \leq \gamma \leq 1&lt;/script&gt;. Although technically if &lt;script type=&quot;math/tex&quot;&gt;\gamma = 1&lt;/script&gt; then the sum is still infinite because all future rewards have an equal weight. However, we generally use &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
+\gamma &lt; 1 %]]&gt;&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p&gt;Now that we know how &lt;script type=&quot;math/tex&quot;&gt;G_t&lt;/script&gt; is defined mathematically, let’s revisit our previous statement: &lt;script type=&quot;math/tex&quot;&gt;V(s_{M2}) &gt; V(s_{M1})&lt;/script&gt;. The farther Mario is from the right, the longer it takes to get to the end of the map. If it takes longer to get to the end of the map, then we have to add up more negative rewards to our cumulative sum (since we get a negative reward every time the clock ticks). Thus, it makes sense that &lt;script type=&quot;math/tex&quot;&gt;V(s_{M2}) &gt; V(s_{M1})&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p&gt;Great, now that we have an intuition into how the state-value function works, let’s do some algebra to get a very important equation in reinforcement learning:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;% &lt;![CDATA[
+\begin{align*}
+	V(s) &amp;= \mathbb{E}[\, G_t \, | \, S_t=s \,] \\
+    &amp;= \mathbb{E}[\, R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \ldots \, | \, S_t=s \,] \\
+    &amp;= \mathbb{E}[\, R_{t+1} + \gamma (R_{t+2} + \gamma R_{t+3} + \ldots) \, | \, S_t=s \,] \\
+    &amp;= \mathbb{E}[\, R_{t+1} + \gamma G_{t+1} \, | \, S_t=s \,] \\
+    &amp;= \mathbb{E}[\, R_{t+1} + \gamma V(S_{t+1}) \, | \, S_t=s \,]
+\end{align*} %]]&gt;&lt;/script&gt;
+
+&lt;p&gt;The equation that we end up with is know as the Bellman equation. If we think about it, it’s actually quite intuitive: the value for being in a particular state is equal to the expected reward we will receive from that state plus the discounted expected value of being in the next state. Let’s break this down a bit more. If the value for being in a state is equal to the sum of discounted future rewards, then &lt;script type=&quot;math/tex&quot;&gt;V(s_{t+1})&lt;/script&gt; is the sum of discounted rewards after &lt;script type=&quot;math/tex&quot;&gt;t+1&lt;/script&gt;. So if we add &lt;script type=&quot;math/tex&quot;&gt;R_{t+1}&lt;/script&gt; to &lt;script type=&quot;math/tex&quot;&gt;\gamma V(s_{t+1})&lt;/script&gt;, then we get the sum of discounted rewards after &lt;script type=&quot;math/tex&quot;&gt;t&lt;/script&gt;, which is &lt;script type=&quot;math/tex&quot;&gt;V(s)&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p&gt;Alternatively, we can write the Bellman equation as,&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;V(s)=\mathcal{R}_s + \gamma \sum_{s^\prime \in \mathcal{S}} \mathcal{P}_{ss^\prime} V(s^\prime)&lt;/script&gt;
+
+&lt;p&gt;where &lt;script type=&quot;math/tex&quot;&gt;\mathcal{P}_{ss^\prime}&lt;/script&gt; refers to the probability transition matrix (i.e. the probability of moving from &lt;script type=&quot;math/tex&quot;&gt;s&lt;/script&gt; to &lt;script type=&quot;math/tex&quot;&gt;s^{\prime}&lt;/script&gt; for all &lt;script type=&quot;math/tex&quot;&gt;\mathcal{S}&lt;/script&gt;).&lt;/p&gt;
+
+&lt;p&gt;Up until now, we were talking about the state-value function, but what about &lt;script type=&quot;math/tex&quot;&gt;Q(s,a)&lt;/script&gt;? Most times, people actually care more about &lt;script type=&quot;math/tex&quot;&gt;Q&lt;/script&gt; than &lt;script type=&quot;math/tex&quot;&gt;V&lt;/script&gt;. The reason is because they want to know how to act in a given state, rather than the value of being in a state. This is exactly what &lt;script type=&quot;math/tex&quot;&gt;Q(s,a)&lt;/script&gt; helps you determine because it tells you the value for taking a specific action in a given state. Thus, if you calculate the Q-value for all actions you can take (assuming the action space is discrete), then you can choose the action that has the maximum value. The super popular Q-learning algorithm learns the mapping from states to Q-values, so that an agent knows which actions will yield the highest cumulative discounted reward.&lt;/p&gt;
+
+&lt;p&gt;Let’s solidify our understanding of state-value and action-value. There is going to be a bit more math in this part, so get ready! First, let’s define a new term: the mapping from states to actions is defined as the policy and is denoted as &lt;script type=&quot;math/tex&quot;&gt;\pi(a \mid s)&lt;/script&gt;. Although policies can be deterministic, we are going to read &lt;script type=&quot;math/tex&quot;&gt;\pi(a \mid s)&lt;/script&gt; as “the probability of taking an action given the state”. I find that reading equations out loud in plain english helps solidify my understanding, so that’s what I’m going to do for the next few equations.&lt;/p&gt;
+
+&lt;p&gt;First we show the value of being in state &lt;script type=&quot;math/tex&quot;&gt;s&lt;/script&gt; by following policy &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;. It is equal to the sum of Q-values, which correspond to particular actions, multiplied by the probability of taking those actions according to policy &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;.&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;v_{\pi}(s)=\sum_{a \in \mathcal{A}}\pi(a \mid s)q_{\pi}(s,a)&lt;/script&gt;
+
+&lt;p&gt;Let’s break down &lt;script type=&quot;math/tex&quot;&gt;v_{\pi}(s)&lt;/script&gt; in english:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;In any state, there are multiple actions that we can take&lt;/li&gt;
+  &lt;li&gt;We take each action according to a probability distribution&lt;/li&gt;
+  &lt;li&gt;Each action has a different value associated with it&lt;/li&gt;
+  &lt;li&gt;Thus, the value of being in a state is equal to the weighted average of the action-values, in which the weights are the probabilities of taking each action&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Next we show the value of taking action &lt;script type=&quot;math/tex&quot;&gt;a&lt;/script&gt; in state &lt;script type=&quot;math/tex&quot;&gt;s&lt;/script&gt; by following policy &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;. It is equal to the expected reward from taking an action plus the discounted expected value of being in the next state.&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;q_{\pi}(s,a)=\mathcal{R}_s^a + \gamma \sum_{s^\prime \in \mathcal{S}}\mathcal{P}_{ss^\prime}^{a}v_{\pi}(s^\prime)&lt;/script&gt;
+
+&lt;p&gt;Let’s break down &lt;script type=&quot;math/tex&quot;&gt;q_{\pi}(s,a)&lt;/script&gt; in english:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;For any action an agent takes, it receives a reward&lt;/li&gt;
+  &lt;li&gt;When an agent takes an action, it can end up in a different state
+    &lt;ul&gt;
+      &lt;li&gt;Image if your action was to move to the right - your agent is now in a new state&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Sometimes environments have randomness embedded in them
+    &lt;ul&gt;
+      &lt;li&gt;Imagine if you try to move to the right, but wind pushes you back and you end up to the left of your original position&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Thus, by taking an action in a given state, there is a probability that the agent will end up in various new states&lt;/li&gt;
+  &lt;li&gt;As a result, the value of taking an action in a given state is equal to the immediate reward from taking that action plus the weighted average of state-values for the next state multiplied by a discount factor.
+    &lt;ul&gt;
+      &lt;li&gt;The weights are the probabilities of ending up in the next states.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The previous two equations shown were half-step lookaheads. To show the full one-step lookaheads, we can plug in the previous equations to obtain the following:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;v_{\pi}(s)=\sum_{a \in \mathcal{A}}\pi(a \mid s)\left(\mathcal{R}_s^a + \gamma \sum_{s^\prime \in \mathcal{S}}\mathcal{P}_{ss^\prime}^{a}v_{\pi}(s^\prime)\right)&lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;q_{\pi}(s,a)=\mathcal{R}_s^a + \gamma \sum_{s^\prime \in \mathcal{S}}\mathcal{P}_{ss^\prime}^{a}\sum_{a^\prime \in \mathcal{A}}\pi(a^\prime|s^\prime)q_{\pi}(s^\prime,a^\prime)&lt;/script&gt;
+
+&lt;p&gt;If you understood the intuition for the first two equations, then you should have no problem with the two equations above - they are simply an extension using the exact same logic.&lt;/p&gt;
+
+&lt;h2 id=&quot;policy-gradient&quot;&gt;Policy Gradient&lt;/h2&gt;
+
+&lt;p&gt;What if we want to skip the middle part and just learn a mapping from states to actions without estimating the value of taking an action? We can do this with the policy gradient method, in which we explicitly learn &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;! Well sort of… we will soon see why we will actually need to incorporate the value function, but until then, let’s walk through a simple implementation of a policy gradient. Let’s consider the loss function:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathcal{L} = r \times \log \pi(s,a)&lt;/script&gt;
+
+&lt;p&gt;We want to maximize &lt;script type=&quot;math/tex&quot;&gt;\mathcal{L}&lt;/script&gt;, which is equivalent to minimizing &lt;script type=&quot;math/tex&quot;&gt;-\mathcal{L}&lt;/script&gt; (we usually perform gradient descent, so minimizing a loss function is the convention). By minimizing &lt;script type=&quot;math/tex&quot;&gt;-\mathcal{L}&lt;/script&gt;, we ensure that we increase the probability of taking an action that gives us a positive reward, and decrease the probability of taking an action that gives us a negative reward. That seems like a good idea, right? Not really… let’s go through an example to understand why. Imagine there are 3 actions that an agent can take with rewards of &lt;script type=&quot;math/tex&quot;&gt;[-1,3,20]&lt;/script&gt; in particular state. There are two main problems with this approach:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Credit Assignment Problem&lt;/li&gt;
+  &lt;li&gt;Multiple “Good” Actions&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;The credit assignment problem refers to the fact that rewards can be temporally delayed. For example, if an agent takes an action in time step &lt;script type=&quot;math/tex&quot;&gt;t&lt;/script&gt;, the reward might come well after &lt;script type=&quot;math/tex&quot;&gt;t+1&lt;/script&gt;. An example in Super Mario Bros is when our agent has to jump over a tube; multiple frames elapse from the time it presses the jump button to the time it actually makes it over the tube. The number of time steps that can possibly elapse between actions and rewards differ for each situation, so how do we solve this problem? Although this is not a perfect solution, we can use value functions, specifically &lt;script type=&quot;math/tex&quot;&gt;q_{\pi}(s,a)&lt;/script&gt;. Since &lt;script type=&quot;math/tex&quot;&gt;q_{\pi}(s,a)&lt;/script&gt; sums all future discounted rewards from taking action &lt;script type=&quot;math/tex&quot;&gt;a&lt;/script&gt; and following policy &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;, our agent can take into account rewards that are temporally delayed. Our loss function now becomes:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathcal{L} = q_{\pi}(s,a) \times \log \pi(s,a)&lt;/script&gt;
+
+&lt;p&gt;Let’s now assume that &lt;script type=&quot;math/tex&quot;&gt;[-1,3,20]&lt;/script&gt; represents Q-values instead of rewards. We still have an issue because there are multiple actions that have a positive expected value. Imagine if we sample the second action, which has a positive Q-value. Based on our new policy gradient loss function, the parameter update would increase the probability of taking that action since &lt;script type=&quot;math/tex&quot;&gt;q_{\pi}(s,a)&lt;/script&gt; is positive. But what about action 3? It had a much higher Q-value than action 2, so instead we need a way to tell the model to decease the probability of selecting action 2 and instead select action 3. That is what advantage helps us do.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-advantage-function&quot;&gt;The Advantage Function&lt;/h2&gt;
+
+&lt;p&gt;Rather than looking at how good it is to take an action, advantage tells us how good an action is relative to other actions. This subtlety is important because we want to select actions that are better than average, as opposed to any action that has a positive expected value. To do this, we have to strip out the state-value from the action-value to get a pure estimate of how good an action is. We define advantage as:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A(s,a) = Q(s,a) - V(s)&lt;/script&gt;
+
+&lt;p&gt;If we assume that our policy follows a uniform distribution (equal probability for each action), then &lt;script type=&quot;math/tex&quot;&gt;V(s) = 7.33&lt;/script&gt;, which means that &lt;script type=&quot;math/tex&quot;&gt;A(s,a) = [-8.3,-4.3,12.7]&lt;/script&gt;. Using our new loss function for policy gradients,&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathcal{L} = A_{\pi}(s,a) \times \log \pi(s,a)&lt;/script&gt;
+
+&lt;p&gt;we see that after selecting action 2, our agent will decrease the probability of selecting that action again in the same state because it has a negative advantage (its value is worse than the average). This is great, it does exactly what we want it to do! However, we don’t know the true advantage function (much like the value functions), so we have to estimate it. Luckily, there are a few ways to do this, but I’m going to focus on one method - using the temporal difference error (&lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}&lt;/script&gt;) from our value estimation.&lt;/p&gt;
+
+&lt;p&gt;Let me back up a little to explain what temporal difference error is. Remember when we saw this somewhat complicated equation earlier:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;q_{\pi}(s,a)=\mathcal{R}_s^a + \gamma \sum_{s^\prime \in \mathcal{S}}\mathcal{P}_{ss^\prime}^{a}\sum_{a^\prime \in \mathcal{A}}\pi(a^\prime|s^\prime)q_{\pi}(s^\prime,a^\prime)&lt;/script&gt;
+
+&lt;p&gt;Well it turns out that it will come in handy after all! Just a refresher - the equation above considers all possible paths. But what if we just sample one action from our policy and sample the next state from the environment? Well then it becomes:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;q_{\pi}(s,a) = r + \gamma v_{\pi}(s^{\prime})&lt;/script&gt;
+
+&lt;p&gt;Keep this in mind while I explain &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}&lt;/script&gt;. As the name implies, temporal difference error refers to the difference between the one-step lookahead and the current estimate. We can calculate &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}&lt;/script&gt; for either the state-value or action-value, but in this example we’re using the state-value. When we sample, the one-step lookahead equation for state-value becomes &lt;script type=&quot;math/tex&quot;&gt;v_{\pi}(s) = r + \gamma v_{\pi}(s^{\prime})&lt;/script&gt;. You’ll notice that the left side is a pure estimate, while the right side is a mix of estimation and actual data from the environment. This means that the right side contains more information about the environment than the left! By taking the difference between the two we obtain:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\delta_{TD} = r + \gamma v_{\pi}(s^{\prime}) - v_{\pi}(s)&lt;/script&gt;
+
+&lt;p&gt;and by minimizing &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}^2&lt;/script&gt;, we move our value estimation closer to the actual value function. This is because we are continually moving our estimate closer to a target that contains more data from the actual environment. In addition to using &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}&lt;/script&gt; to optimize our value network, it turns out that we can also use it to estimate advantage. Wait, what? How? Let’s bring back &lt;script type=&quot;math/tex&quot;&gt;q_{\pi}(s,a)&lt;/script&gt;:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;q_{\pi}(s,a) = r + \gamma v_{\pi}(s^{\prime})&lt;/script&gt;
+
+&lt;p&gt;Recall what advantage is defined as:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;A = Q - V&lt;/script&gt;
+
+&lt;p&gt;Now let’s take a look at &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD}&lt;/script&gt; again:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\delta_{TD} = \underbrace{r + \gamma v_{\pi}(s^{\prime})}_{q_{\pi}(s,a)} - v_{\pi}(s)&lt;/script&gt;
+
+&lt;p&gt;which means that &lt;script type=&quot;math/tex&quot;&gt;\delta_{TD} \approx A&lt;/script&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;generalized-advantage-estimation&quot;&gt;Generalized Advantage Estimation&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://arxiv.org/pdf/1506.02438.pdf&quot;&gt;paper&lt;/a&gt; we are referencing in this section was used for continuous control, but it can also be used for a discrete action space, like the one we are working with.&lt;/p&gt;
+
+&lt;p&gt;We will denote our advantage estimate as &lt;script type=&quot;math/tex&quot;&gt;\hat{A}_t&lt;/script&gt;. Like any other estimate, &lt;script type=&quot;math/tex&quot;&gt;\hat{A}_t&lt;/script&gt; is subject to bias (although it has low variance). To get an unbiased estimate, we need to get rid of the value estimate completely and sum all future rewards in an episode. This is known as the Monte Carlo return, and it has high variance. As with most things in machine learning, there is a tradeoff - this one is known as the bias-variance tradeoff in reinforcement learning. Generalized Advantage Estimation (GAE) is a great solution that significantly reduces variance while maintaining a tolerable level of bias. It is parametereized by &lt;script type=&quot;math/tex&quot;&gt;\gamma \in [0,1]&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;\lambda \in [0,1]&lt;/script&gt;, where &lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; is the discount factor mentioned earlier in this blog, and &lt;script type=&quot;math/tex&quot;&gt;\lambda&lt;/script&gt; is the decay parameter used to take an exponentially weighted average of k-step advantage estimators. It is analogous to &lt;a href=&quot;http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.132.7760&amp;amp;rep=rep1&amp;amp;type=pdf&quot;&gt;Sutton’s TD(&lt;script type=&quot;math/tex&quot;&gt;\lambda&lt;/script&gt;)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Before we get into some of the math, I want to note that &lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;\lambda&lt;/script&gt; serve different purposes. To determine the scale of the value function, we use &lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt;. In other words, the value of &lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; determines how nearsighted (&lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; near 0) or farsighted (&lt;script type=&quot;math/tex&quot;&gt;\gamma&lt;/script&gt; near 1) we want our agent to be in its value estimate. No matter how accurate our value function is, if &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
+\gamma &lt; 1 %]]&gt;&lt;/script&gt;, we introduce bias into the policy gradient estimate. On the other hand, &lt;script type=&quot;math/tex&quot;&gt;\lambda&lt;/script&gt; is a decay factor and &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
+\lambda &lt; 1 %]]&gt;&lt;/script&gt; only introduces bias when the value function is inaccurate.&lt;/p&gt;
+
+&lt;p&gt;I’m going to spare you the details on the derivation of GAE because I feel like we’ve gone through enough math for one post. However, if you have any questions just let me know in the comments section below and I’ll explain it in-depth. As mentioned before, GAE is defined as the exponentially weighted average of k-step advantage estimators. The equation is shown below:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\hat{A}^{GAE(\gamma,\lambda)}_t = \sum^{\infty}_{l=0}(\gamma \lambda)^l\delta_{t+l}&lt;/script&gt;
+
+&lt;p&gt;If you understand the equation above, then you might find this next part pretty cool, otherwise you can just skip over it. There are two special cases of the formula above, when &lt;script type=&quot;math/tex&quot;&gt;\lambda=0&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;\lambda=1&lt;/script&gt;:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;GAE(\gamma,0): \hat{A}_t := \delta_t = r_t + \gamma V(S_{t+1}) - V(S_t)&lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;GAE(\gamma,1): \hat{A}_t := \sum^{\infty}_{l=0}\gamma\delta_{t+l} = \sum^{\infty}_{l=0}\gamma^lr_{t+l} - V(S_t)&lt;/script&gt;
+
+&lt;p&gt;When we have &lt;script type=&quot;math/tex&quot;&gt;% &lt;![CDATA[
+0 &lt; \lambda &lt; 1 %]]&gt;&lt;/script&gt;, our GAE is making a compromise between bias and variance. From now on, our loss function for the policy gradient becomes:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\mathcal{L} = \hat{A}^{GAE(\gamma,\lambda)} \times \log \pi(s,a)&lt;/script&gt;
+
+&lt;p&gt;Going forward, when you see &lt;script type=&quot;math/tex&quot;&gt;\hat{A}_t&lt;/script&gt;, we are actually referring to &lt;script type=&quot;math/tex&quot;&gt;\hat{A}^{GAE(\gamma,\lambda)}_t&lt;/script&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;proximal-policy-optimization&quot;&gt;Proximal Policy Optimization&lt;/h2&gt;
+
+&lt;p&gt;We’re finally done catching up on all the background knowledge - time to learn about Proximal Policy Optimization (PPO)! This algorithm is from &lt;a href=&quot;https://arxiv.org/pdf/1707.06347.pdf&quot;&gt;OpenAI’s paper&lt;/a&gt;, and I highly recommend checking it out to get a more in-depth understanding after reading my blog.&lt;/p&gt;
+
+&lt;p&gt;PPO takes inspiration from &lt;a href=&quot;https://arxiv.org/pdf/1502.05477.pdf&quot;&gt;Trust Region Policy Optimization&lt;/a&gt; (TRPO), which maximizes a “surrogate” objective function:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L^{CPI}(\theta) = \hat{\mathbb{E}}_t\big[r_t(\theta)\hat{A}_t\big]&lt;/script&gt;
+
+&lt;p&gt;where &lt;script type=&quot;math/tex&quot;&gt;r_t(\theta)&lt;/script&gt; represents the probability ratio of our current policy versus our old policy:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;r_t(\theta) = \frac{\pi_{\theta}(a_t \mid s_t)}{\pi_{\theta_{old}}(a_t \mid s_t)}&lt;/script&gt;
+
+&lt;p&gt;TRPO also has constraints that I’m not going to get into, but if you’re interested, I highly recommend reading the paper. While TRPO is quite impressive, it is complex and computationally expensive to run. As a result, OpenAI came up with a simpler, more general algorithm that has better sample complexity (empirically). The idea is to limit how much our policy can change during each round of updates by clipping &lt;script type=&quot;math/tex&quot;&gt;r_t(\theta)&lt;/script&gt; between a range determined by &lt;script type=&quot;math/tex&quot;&gt;\epsilon&lt;/script&gt;:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L^{CLIP}(\theta) = \hat{\mathbb{E}}_t\big[\min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1 - \epsilon, 1 + \epsilon)\hat{A}_t)\big]&lt;/script&gt;
+
+&lt;p&gt;The reason we do this is because conventional policy gradient methods are very sensitive to your choice of step size. If the step size is too small then the training progresses too slowly. If the step size is too large then your policy can overshoot the optimal policy during training, making it too noisy. By limiting how much our policy can change, we reduce the sensitivity to the step size.&lt;/p&gt;
+
+&lt;p&gt;You will notice in the image below (taken from the PPO paper) that there are certain values of &lt;script type=&quot;math/tex&quot;&gt;r_t(\theta)&lt;/script&gt; where the gradient is 0. When the advantage is positive, the cutoff point is &lt;script type=&quot;math/tex&quot;&gt;1 + \epsilon&lt;/script&gt;. When the advantage is negative, the cutoff point is &lt;script type=&quot;math/tex&quot;&gt;1 - \epsilon&lt;/script&gt;. By taking the minimum of the clipped and unclipped objective, as demonstrated below, we are creating a lower bound on the unclipped objective. In other words, we ignore a change in &lt;script type=&quot;math/tex&quot;&gt;r_t(\theta)&lt;/script&gt; when it makes the objective improve, which is why the lower bound is also known as the pessimistic bound.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/PPO-objective.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The video shown below was created after only 10 minutes of training using PPO on a Macbook Pro. I plan on running the algorithm for longer and updating the video sometime this week (probably around the same time I release the code on github):&lt;/p&gt;
+
+&lt;video controls=&quot;controls&quot; allowfullscreen=&quot;true&quot;&gt;
+  &lt;source src=&quot;/images/mario.avi&quot; type=&quot;video/mp4&quot; /&gt;
+&lt;/video&gt;
+
+&lt;h2 id=&quot;concluding-remarks&quot;&gt;Concluding Remarks&lt;/h2&gt;
+
+&lt;p&gt;In this post, we covered a lot of reinforcement learning background and learned how PPO works. We see that using GAE with PPO is a clever way to deal with the credit assignment problem, while keeping bias in check. We also learned a little bit about convolutional neural networks as a way to deal with pixelated inputs. I hope you can take what you learned in this post and apply it to your favorite games!&lt;/p&gt;
+
+&lt;div id=&quot;disqus_thread&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = http://localhost:4000;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = /mario-ppo; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://brandinho-github-io.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+&lt;/script&gt;
+
+&lt;noscript&gt;Please enable JavaScript to view the &lt;a href=&quot;https://disqus.com/?ref_noscript&quot;&gt;comments powered by Disqus.&lt;/a&gt;&lt;/noscript&gt;</content><author><name>Brandon Da Silva</name><email>brandasilva9@gmail.com</email></author><category term="Reinforcement Learning" /><category term="Proximal Policy Optimization" /><category term="Policy Gradient" /><summary type="html">Reinforcement Learning, Neural Networks, Policy Gradient</summary></entry><entry><title type="html">Learning How to Run with Genetic Algorithms</title><link href="http://localhost:4000/genetic-algorithm/" rel="alternate" type="text/html" title="Learning How to Run with Genetic Algorithms" /><published>2018-11-18T00:00:00-05:00</published><updated>2018-11-18T00:00:00-05:00</updated><id>http://localhost:4000/genetic-algorithm</id><content type="html" xml:base="http://localhost:4000/genetic-algorithm/">&lt;h2 id=&quot;overview&quot;&gt;Overview&lt;/h2&gt;
+
+&lt;p&gt;When most people think of Deep Reinforcement Learning, they probably think of Q-networks or policy gradients. Both of these methods require you to calculate derivatives and use gradient descent. In this post, we are going to explore a derivative-free method for optimizing a policy network. Specifically, we are going to be using a genetic algorithm on DeepMind’s &lt;a href=&quot;https://arxiv.org/pdf/1801.00690.pdf&quot;&gt;Control Suite&lt;/a&gt; to allow the “cheetah” physical model to learn how to run. You can find the complete code on my &lt;a href=&quot;https://github.com/brandinho/Genetic-Algorithm-Control-Suite&quot;&gt;github repo&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;genetic-algorithm-background&quot;&gt;Genetic Algorithm Background&lt;/h2&gt;
+
+&lt;p&gt;Genetic algorithms (GAs) are inspired by natural selection, as put forth by Charles Darwin. The idea is that over generations, the heritable traits of a population change because of &lt;em&gt;mutation&lt;/em&gt; and the concept of &lt;em&gt;survival of the fittest&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Similar to natural selection, GAs iterate over multiple generations to evolve a population. The population in our case is going to consist of a bunch of neural network weights, which define our cheetah agents. You can think of each set of neural network weights as an individual agent in the population - usually called a chromosome or genotype. Chromosomes are usually encoded as binary strings, but since we want to optimize neural networks weights, we will adapt it for continuous numbers. Each neural network weight in our chromosome can be referred to as a gene. After iterating through all the generations, and continually improving the cheetah’s chromosome (its neural network weights), we hope that it learns how to run.&lt;/p&gt;
+
+&lt;h3 id=&quot;initialization&quot;&gt;Initialization&lt;/h3&gt;
+
+&lt;p&gt;To begin the process, we need to initialize our population of agents. We sample the initial neural network weights from a normal distribution with a scaling factor outlined in &lt;a href=&quot;http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf&quot;&gt;Glorot and Bengio’s paper&lt;/a&gt;:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;Var[W^i] = \frac{2}{n_i + n_{i+1}}&lt;/script&gt;
+
+&lt;p&gt;where &lt;script type=&quot;math/tex&quot;&gt;W^i&lt;/script&gt; refers to the weight matrix in the &lt;script type=&quot;math/tex&quot;&gt;i^\text{th}&lt;/script&gt; layer, while &lt;script type=&quot;math/tex&quot;&gt;n_i&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;n_{i+1}&lt;/script&gt; refer to the input and output dimensionality of that layer. Below you’ll see python code to implement the population initialization, where &lt;code class=&quot;highlighter-rouge&quot;&gt;scaling_factor&lt;/code&gt; is a vector of variances calculated according to the equation above:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;multivariate_normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mean&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scaling_factor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+                                             &lt;span class=&quot;n&quot;&gt;cov&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;diag&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scaling_factor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+                                             &lt;span class=&quot;n&quot;&gt;size&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population_size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;  
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;selection&quot;&gt;Selection&lt;/h3&gt;
+
+&lt;p&gt;Now that we have a population, we can have the agents within the population compete against each other! The agents that are the most “fit” have the highest probability of passing their genes onto the next generation. We will define fitness as the cumulative reward of our agent over the span of an episode. As you might have guessed by the way we defined it, fitness refers to how good an agent is at performing the task we want it to learn. Those that are better at performing the task will have a better chance of being selected as parents to breed a new generation. There are two primary methods for parent selection - &lt;strong&gt;Roulette&lt;/strong&gt; and &lt;strong&gt;Tournament&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;The roulette method selects parents with a probability proportional to their fitness score. This is why it is also called &lt;em&gt;Fitness Proportionate Selection&lt;/em&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;c1&quot;&gt;# Roulette Wheel Selection
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;position&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;random_number&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uniform&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;low&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;high&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;scores_cumulsum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;position&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;append&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;enumerate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scores_cumulsum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;random_number&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;population_index_sorted&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;position&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;population_index_sorted&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;position&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The tournament method runs two tournaments in parallel with different subsets of the total population. The competitors for each tournament are chosen at random. The winners from each tournament are selected as the parents to breed the next generation.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;c1&quot;&gt;# Tournament Selection
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;k&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population_size&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;tournament_population&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;zeros&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;total_competitors&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;choice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;population_size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;k&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;replace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;tournament_population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[:,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;competition_scores&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;total_competitors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;tournament_population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[:,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;competition_scores&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;total_competitors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:]]&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;parent_indexes&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;total_competitors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;argmax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tournament_population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;axis&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent_indexes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent_indexes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;elitism&quot;&gt;Elitism&lt;/h3&gt;
+
+&lt;p&gt;One thing we can do to improve performance in our algorithm is introduce the concept of elitism. This refers to the act of carrying over the most fit agents to the next generation without altering their chromosomes through crossover or mutation (which we will explore very soon). We do this because we always want to preserve the best agents from one generation to the next; it is not guaranteed that any of the children will be more fit than their parents.&lt;/p&gt;
+
+&lt;h3 id=&quot;crossover&quot;&gt;Crossover&lt;/h3&gt;
+
+&lt;p&gt;Now that we know how to select the parents from the population, let’s talk breeding! Crossover, also called recombination, takes the chromosomes of two parents and combines them to form children in the next generation. Here are a few ways you can combine two chromosomes:&lt;/p&gt;
+
+&lt;p&gt;The first and easiest way is to perform &lt;strong&gt;One Point&lt;/strong&gt; crossover. You randomly select a partition in the chromosome, as indicated by the red line below. The child gets the left side of the partition from one parent and the right side from the other parent.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/one_point_crossover.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;partition&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Select which parent will be the &quot;left side&quot;
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 1&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;partition&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;partition&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 2&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;partition&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;partition&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Building on the previous method is &lt;strong&gt;Two Point&lt;/strong&gt; crossover. This is conceptually the same, except you randomly select two points, which serve as a lower and upper bound. The child gets the elements outside of the bounds from one parent, and the elements within the bounds from the other parent.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/two_point_crossover.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Select which parent will be the &quot;outside bounds&quot;
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 1&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 2&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Unlike the previous two methods, which required the swapped genes to be in a sequence, the &lt;strong&gt;Uniform&lt;/strong&gt; crossover does not. Rather, it randomly selects, with a uniform distribution, the indexes to be swapped during crossover.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/uniform_crossover.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;random_sequence&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;choice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;replace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 1&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_sequence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_sequence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;elif&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;which_parent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Parent 2&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_sequence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_sequence&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;For the last crossover method, we’ll switch it up a little bit with the &lt;strong&gt;Arithmetic&lt;/strong&gt; crossover. Like the name implies, rather than swapping genes to form a new chromosome, we will do some arithmetics to make a new chromosome. We will perform a simple weighted average on the chromosomes, where the weight is randomly generated.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/arithmetic_crossover.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;random_weight&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rand&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;random_weight&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parent_2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;random_weight&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Personally, I like using all of the crossover methods, so each time my algorithm performs crossover I randomly select one of the above methods with equal probability.&lt;/p&gt;
+
+&lt;p&gt;When setting up a genetic algorithm we define a probability of performing crossover, &lt;script type=&quot;math/tex&quot;&gt;p_\text{cross}&lt;/script&gt;. Thus, with &lt;script type=&quot;math/tex&quot;&gt;1 - p_\text{cross}&lt;/script&gt; probability, we carry over the parent chromosomes to the next generation without crossover. Since we are going to use elitism in our algorithm, we will probably want to set &lt;script type=&quot;math/tex&quot;&gt;p_\text{cross}&lt;/script&gt; to be close to 1 because otherwise there is a high probability that we will have duplicate chromosomes in the next generation.&lt;/p&gt;
+
+&lt;h3 id=&quot;mutation&quot;&gt;Mutation&lt;/h3&gt;
+
+&lt;p&gt;After reviewing some of the crossover methods, you might be thinking that we’re just combining genes together without changing their order (with the exception of the arithmetic operator). This means that our chromosomes will be bounded by the initialized values from the first generation, which limits how much our agents can evolve. To ensure this doesn’t happen, we need to maintain genetic diversity - we do this with the mutation operator.&lt;/p&gt;
+
+&lt;p&gt;Similar to crossover, there are multiple ways to perform mutation. For my implementation I randomly select a gene with &lt;script type=&quot;math/tex&quot;&gt;p_\text{mutate}&lt;/script&gt; probability and add gaussian noise to it:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;n&quot;&gt;noise&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;standard_normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;noise_scale&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;mutation_position&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;population&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutation_position&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutation_position&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;noise&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Even though I remained relatively simple with my implementation, you can get a bit fancier by implementing some of the mutation methods outlined below. The first is the &lt;strong&gt;Swap&lt;/strong&gt; mutation, which selects two random positions in the chromosome and swaps their genes:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/swap_mutation.png&quot; alt=&quot;alt&quot; style=&quot;max-width: 300px; height: auto;&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;random_positions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;choice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]),&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;replace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;value_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value_2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_positions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_positions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_positions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_positions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value_1&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Another method you can implement is the &lt;strong&gt;Inversion&lt;/strong&gt; mutation, which selects two random positions and inverts/reverses the substring of genes between them:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/inversion_mutation.png&quot; alt=&quot;alt&quot; style=&quot;max-width: 300px; height: auto;&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][::&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Lastly, you can implement the &lt;strong&gt;Scramble&lt;/strong&gt; mutation, which selects two random positions and scrambles the positions of the genes within them:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/scramble_mutation.png&quot; alt=&quot;alt&quot; style=&quot;max-width: 300px; height: auto;&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randint&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;scrambled_order&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;choice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;replace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_limit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_limit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scrambled_order&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;deepminds-control-suite&quot;&gt;DeepMind’s Control Suite&lt;/h2&gt;
+
+&lt;p&gt;Great, now that we have all the pieces to make a genetic algorithm, let’s put them together to train the “cheetah” domain from DeepMind’s Control Suite. For those who are not familiar with the library, it is powered by the MuJoCo physics engine and provides you with an environment to train agents on a set of continuous control tasks. For our experiment we want the cheetah to learn how to run.&lt;/p&gt;
+
+&lt;p&gt;The thing that I really like about this library is that it has a standardized structure. For example, the library provides you with an observation of the environment and a reward for every action you take. The state observation for our domain task is a combination of the cheetah’s position and velocity. The reward, &lt;script type=&quot;math/tex&quot;&gt;r&lt;/script&gt;, is a function of the forward velocity, &lt;script type=&quot;math/tex&quot;&gt;v&lt;/script&gt;, up to a maximum of &lt;script type=&quot;math/tex&quot;&gt;10 m/s&lt;/script&gt;:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;r(v) = max(0, min(v/10, 1))&lt;/script&gt;
+
+&lt;p&gt;We run each episode for 500 frames and calculate the fitness, &lt;script type=&quot;math/tex&quot;&gt;f&lt;/script&gt;, as:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;f = \sum_{i=1}^{500}r_i&lt;/script&gt;
+
+&lt;p&gt;At each time step, our agent has to make 6 actions in parallel - the movement of each of its limbs. The action vector for our cheetah has the following property: &lt;script type=&quot;math/tex&quot;&gt;\boldsymbol{a} \in \mathcal{A} \equiv [-1,1]^{6}&lt;/script&gt;. Thus, for our policy, we are going to use a neural network with a 6-dimensional &lt;script type=&quot;math/tex&quot;&gt;\tanh&lt;/script&gt; output. We flatten all of the neural network weights to a one dimensional array in order to implement the crossover and mutation operators mentioned above. After the child chromosome is created, we reshape the weights to be used in a neural network for the next generation. Overall, we used 1000 generations with a population size of 40 to train our cheetah.&lt;/p&gt;
+
+&lt;p&gt;When the training process starts (Generation 1), we see that the cheetah doesn’t know how to move and end up falling backwards:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/images/cheetah_start.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;As training progresses (Generation 250), the cheetah learns how to run forward. However, we see that near the end of the episode it loses control of its stride and falls flat on its face:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/images/cheetah_mid.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;At the end of the training process (Generation 1000), we see that the cheetah learns how to run, while also maintaining its center of gravity during large strides:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/images/cheetah_end.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Awesome, we did it!&lt;/p&gt;
+
+&lt;h2 id=&quot;concluding-remarks&quot;&gt;Concluding Remarks&lt;/h2&gt;
+
+&lt;p&gt;In this post we learned how genetic algorithms can be used to optimize parameters of a neural network for a continuous control task. In a future post we will explore an application where we mix genetic algorithms (derivative-free method) and policy gradients (derivative-based method) for better training.&lt;/p&gt;
+
+&lt;div id=&quot;disqus_thread&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = http://localhost:4000;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = /genetic-algorithm; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://brandinho-github-io.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+&lt;/script&gt;
+
+&lt;noscript&gt;Please enable JavaScript to view the &lt;a href=&quot;https://disqus.com/?ref_noscript&quot;&gt;comments powered by Disqus.&lt;/a&gt;&lt;/noscript&gt;</content><author><name>Brandon Da Silva</name><email>brandasilva9@gmail.com</email></author><category term="Reinforcement Learning" /><category term="Genetic Algorithm" /><summary type="html">Reinforcement Learning, Neural Networks, Genetic Algorithm</summary></entry><entry><title type="html">Learning Probability Distributions in Bounded Action Spaces</title><link href="http://localhost:4000/bayesian-policy/" rel="alternate" type="text/html" title="Learning Probability Distributions in Bounded Action Spaces" /><published>2018-11-12T00:00:00-05:00</published><updated>2018-11-12T00:00:00-05:00</updated><id>http://localhost:4000/bayesian-policy</id><content type="html" xml:base="http://localhost:4000/bayesian-policy/">&lt;h2 id=&quot;overview&quot;&gt;Overview&lt;/h2&gt;
+
+&lt;p&gt;In this post we will learn how to apply reinforcement learning in a probabilistic manner. More specifically, we will be looking at some of the difficulties in applying conventional approaches to bounded action spaces, and provide a solution. This blog assumes you have knowledge in deep learning. If not, check out &lt;a href=&quot;http://neuralnetworksanddeeplearning.com/chap1.html&quot;&gt;Michael Nielsen’s book&lt;/a&gt; - it is very comprehensive and easy to understand.&lt;/p&gt;
+
+&lt;h2 id=&quot;reinforcement-learning-background&quot;&gt;Reinforcement Learning Background&lt;/h2&gt;
+
+&lt;p&gt;I am not going to provide a complete background on Reinforcement Learning (RL) because there are already some excellent resources online such as &lt;a href=&quot;https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0&quot;&gt;Arthur Juliani’s blogs&lt;/a&gt; and &lt;a href=&quot;https://www.youtube.com/watch?v=2pWv7GOvuf0&amp;amp;list=PLzuuYNsE1EZAXYR4FJ75jcJseBmo4KQ9-&quot;&gt;David Silver’s lectures&lt;/a&gt;. I highly recommend going through both to get a solid understanding of the fundamentals. With that said, I will explain some concepts that are important for this blog post.&lt;/p&gt;
+
+&lt;p&gt;At the most basic level, the goal of RL is to learn a mapping from states to actions. To understand what this means, I think it is important to take a step back and understand the RL framework more generally. Cue the overused RL diagram:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/AgentEnvironment.jpg&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The first thing to notice is that there is a feedback loop between the agent and the environment. For clarity, the agent refers to the AI that we are creating, while the environment refers to the world that the agent has to navigate through. In order to navigate through an environment, the agent has to take actions. The specific actions will depend on the domain - we will describe a few fairly soon. After the agent takes an action, it receives an observation of the environment (the current state) and a reward (assuming we don’t have sparse rewards).&lt;/p&gt;
+
+&lt;p&gt;After interacting with the environment for long enough, we hope that our agent learns how to take actions that maximize its cumulative reward over the long-term. It is important to realize that the best action in one state is not necessarily the best action in another state. So going back to our statement about mapping states to actions, this simply means that we want our agent to learn the best actions to take in each environment state. The function that maps states to actions is called a policy and is denoted as &lt;script type=&quot;math/tex&quot;&gt;\pi(a \mid s)&lt;/script&gt;. Usually we read &lt;script type=&quot;math/tex&quot;&gt;\pi(a \mid s)&lt;/script&gt; as: &lt;em&gt;probability of taking action &lt;script type=&quot;math/tex&quot;&gt;a&lt;/script&gt;, given we are in state &lt;script type=&quot;math/tex&quot;&gt;s&lt;/script&gt;&lt;/em&gt;. However, just as a side note, your policy does not have to be defined probabilistically - you can define it deterministically as well.&lt;/p&gt;
+
+&lt;p&gt;Now let’s talk a bit about actions an agent can take. The first distinction I would like to make is between discrete actions and continuous actions. When we refer to discrete actions, we simply mean that there is a finite set of possible actions an agent can take. For example, in pong an agent can decide to move up or down. On the other hand, continuous actions have an infinite number of possibilities. An example of a continuous action, although kind of silly, is the hiding position of an agent if it is playing hide and seek.&lt;/p&gt;
+
+&lt;p&gt;Given enough time, the agent can theoretically hide anywhere - so the action space is unbounded. In contrast, we can have a continuous action space that is bounded. An example close to my heart is position sizing when trading a financial asset. The bounds are -1 (100% Short) and 1 (100% Long). To map states to that bounded action space, we can use &lt;script type=&quot;math/tex&quot;&gt;\tanh&lt;/script&gt; in the final layer of a neural network. That seems pretty easy… so why am I writing a blog post about it? Often times we need more than just a deterministic output, especially when the underlying data has a low signal-to-noise ratio. The additional piece of information that we need is &lt;em&gt;uncertainty&lt;/em&gt; in our agent’s decision. We will use a Bayesian approach to model a posterior distribution and sample from this distribution to estimate the uncertainty. Don’t worry if that doesn’t completely make sense yet - it will by the end of this post!&lt;/p&gt;
+
+&lt;h2 id=&quot;probability-distributions&quot;&gt;Probability Distributions&lt;/h2&gt;
+
+&lt;p&gt;For a great introduction to Bayesian statistics I suggest reading &lt;a href=&quot;https://www.countbayesie.com&quot;&gt;Will Kurt’s blog&lt;/a&gt; - Count Bayesie. It’s awesome.&lt;/p&gt;
+
+&lt;p&gt;Distributions can be thought of as representing beliefs about the world. Specifically as it relates to our task at hand, the probability distributions represent our beliefs in how good an action is, given the state. In the financial markets context, where the action space is continuous and bounded between -1 and 1, a mean close to 1 represents a belief that it is a good time to buy that asset, so we should long it. A mean close to -1 represents the opposite, so we should short the asset. Building on this example, if the standard deviation of our distribution is large (small) then our agent is uncertain (certain) in its decision. In other words, if the agent’s policy has a large standard deviation, then it has not developed a strong belief yet.&lt;/p&gt;
+
+&lt;p&gt;Whenever you hear anyone talking about Bayesian statistics, you always hear the terms “prior” and “posterior”. Simply put, a prior is your belief about the world &lt;em&gt;before&lt;/em&gt; receiving new information. However, once you receive new information, then you update your prior distribution to form a posterior distribution. After that, if you receive more information, then your posterior becomes your prior, and the new information gets incorporated to form a new posterior distribution. Essentially, there is this feedback loop of continual learning that happens as more and more new information gets processed by your agent. Below we visually show one iteration of this loop:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/prior_posterior.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Our goal is to learn a good posterior distribution on actions, conditioned on the state that the agent is in. If you are familiar with &lt;a href=&quot;https://arxiv.org/pdf/1506.02142.pdf&quot;&gt;this paper&lt;/a&gt;, then you might be thinking that we can just use Monte Carlo (MC) dropout with a &lt;script type=&quot;math/tex&quot;&gt;\tanh&lt;/script&gt; output layer. For those who are not familiar with this concept, let me explain. Dropout is a technique that was originally used for neural network regularization. With each pass, it will randomly “drop” neurons from each hidden layer by setting their output to 0. This reduces the output’s dependency on any one particular neuron, which should help generalization. However, researchers at Cambridge found that using dropout during inference can be used to approximate a posterior distribution. This is because each time you pass inputs through the network, a different set of neurons will be dropped, so the output is going to be different for each run - creating a distribution of outputs.&lt;/p&gt;
+
+&lt;p&gt;The great thing about this architecture is that you can easily pass gradients through the policy network. The loss function that we are minimizing throughout this blog is &lt;script type=&quot;math/tex&quot;&gt;\mathcal{L} = - r \times \pi(s)&lt;/script&gt;, where &lt;script type=&quot;math/tex&quot;&gt;r&lt;/script&gt; denotes the reward and &lt;script type=&quot;math/tex&quot;&gt;\pi(s)&lt;/script&gt; denotes the policy output given the states (i.e. the action). We wanted to demonstrate how the distribution changes in a controlled environment. So we use the same state input throughout all our experiments and continually feed it a positive reward to view the changes during training. Below is the first example using the MC Dropout method and a &lt;script type=&quot;math/tex&quot;&gt;\tanh&lt;/script&gt; output layer.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/MC_dropout_posterior.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I omitted a kernel density estimation (KDE) plot on top of the histogram because as training progressed, the KDE became much more jagged and not representative of the actual probability density function (PDF). I was using &lt;code class=&quot;highlighter-rouge&quot;&gt;sns.kdeplot&lt;/code&gt;, if anyone knows how to fix this, please let me know in the comments section!&lt;/p&gt;
+
+&lt;p&gt;There are two things that I don’t particularly like about this approach. The first is that it is possible to have multiple peaks in the distribution, as seen when the neural network is first initialized. I realize that as training went on, only one peak emerged. However, the fact that an agent can potentially learn such a distribution (with multiple peaks) makes me uncomfortable. If we go back to our example in the financial markets, an action of -1 will have the exact opposite reward compared to an action of 1 (because it is the other side of the trade), so having peaks at both ends of the spectrum is quite confusing. I would much rather just have one peak near 0 with a large standard deviation if the agent is uncertain which action to take. The second is that it becomes overly optimistic in its decision when compared to a gaussian output (we will see this later), which could possibly indicate that it is understating the uncertainty.&lt;/p&gt;
+
+&lt;p&gt;I will digress for a moment to state that a multimodal distribution (a distribution with multiple peaks) is not always bad. For example if you imagine an agent trying to navigate through a room and their policy dictates the angle at which they will move, then there could be two different angles that, while momentarily will send them in different directions, will ultimately lead them to the same end location. However, for this post, we will stick to the example in the financial markets, where a multimodal distribution doesn’t make sense.&lt;/p&gt;
+
+&lt;p&gt;Instead of using MC dropout, we can try using a normal distribution in the output and see if things improve. The architecture of our neural network now becomes:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/gaussian_output.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;If our neural network parameters are denoted by &lt;script type=&quot;math/tex&quot;&gt;\theta&lt;/script&gt;, then we can define &lt;script type=&quot;math/tex&quot;&gt;\mu_{\theta}&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;\sigma_{\theta}&lt;/script&gt; as outputs of the neural network, such that:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\pi \sim \mathcal{N}(\mu_{\theta}(s), \sigma_{\theta}(s))&lt;/script&gt;
+
+&lt;h2 id=&quot;reparameterization-trick&quot;&gt;Reparameterization Trick&lt;/h2&gt;
+
+&lt;p&gt;We want to update the policy network with backpropagation (similar to what we did with the MC dropout architecture), but you’ll notice that we have a bit of a problem - a random variable is now part of the computation graph. This is a problem because backpropagation cannot flow through a random node. However, by using the reparameterization trick, we can move the random node outside of the computation graph and then feed in samples drawn from the distribution as constants. Inference is the exact same, but now our neural network can perform backpropagation.&lt;/p&gt;
+
+&lt;p&gt;To do this, we define a random variable &lt;script type=&quot;math/tex&quot;&gt;\varepsilon&lt;/script&gt;, which does not depend on &lt;script type=&quot;math/tex&quot;&gt;\theta&lt;/script&gt;. The new architecture becomes:&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/gaussian_reparameterized.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\varepsilon \sim \mathcal{N}(0,I)&lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;\pi = \mu_{\theta}(s) + \sigma_{\theta}(s) \cdot \varepsilon&lt;/script&gt;
+
+&lt;p&gt;Python code to take the random variable outside of the computation graph is shown below (I’m only showing the relevant portion of the computation graph):&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;tensorflow&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;policy_mu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nn&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tanh&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;matmul&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;previous_layer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weights_mu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bias_mu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;policy_sigma&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nn&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;softplus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;matmul&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;previous_layer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weights_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bias_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                
+
+  &lt;span class=&quot;n&quot;&gt;epsilon&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random_normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shape&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;policy_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mean&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stddev&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dtype&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;float32&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;policy&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;policy_mu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;policy_sigma&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;epsilon&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now to get the neural network to work in a bounded space, we can clip outputs to be between -1 and 1. We simply change the last line of code in our network to:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;policy&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;clip_by_value&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;policy_mu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;policy_sigma&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;epsilon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;clip_value_min&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;clip_value_max&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The resulting distribution is shown below:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/clipped_posterior.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;There is one obvious flaw in this approach - all of the clipped values get a value of either -1 or 1, which creates a very unbalanced distribution. To fix this, we will sample &lt;script type=&quot;math/tex&quot;&gt;\varepsilon&lt;/script&gt; from a truncated normal distribution.&lt;/p&gt;
+
+&lt;h2 id=&quot;truncated-normal-solution&quot;&gt;Truncated Normal Solution&lt;/h2&gt;
+
+&lt;p&gt;A truncated normal distribution is similar to a normal distribution, in that it is defined by a mean (&lt;script type=&quot;math/tex&quot;&gt;\mu&lt;/script&gt;) and standard deviation (&lt;script type=&quot;math/tex&quot;&gt;\sigma&lt;/script&gt;). However, the key distinction is that the distribution’s range is limited to be within a lower and upper bound. Typically the lower bound is denoted by &lt;script type=&quot;math/tex&quot;&gt;a&lt;/script&gt; and the upper bound is denoted by &lt;script type=&quot;math/tex&quot;&gt;b&lt;/script&gt;, but I’m going to use &lt;script type=&quot;math/tex&quot;&gt;L&lt;/script&gt; and &lt;script type=&quot;math/tex&quot;&gt;U&lt;/script&gt; because I think it is easier to follow.&lt;/p&gt;
+
+&lt;p&gt;One might think that the bounds we define for the distribution should be the same as the bounds of our policy, but that won’t work if we want to use reparameterization. This is because the bounds apply to &lt;script type=&quot;math/tex&quot;&gt;\varepsilon&lt;/script&gt; and not &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt;. Since we expand &lt;script type=&quot;math/tex&quot;&gt;\varepsilon&lt;/script&gt; by &lt;script type=&quot;math/tex&quot;&gt;\sigma&lt;/script&gt; and shift it by &lt;script type=&quot;math/tex&quot;&gt;\mu&lt;/script&gt;, then applying bounds of -1 and 1 will result in a &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt; that extends beyond the bounds. To make this point more clear, let’s say we defined our bounds &lt;script type=&quot;math/tex&quot;&gt;-1 \leq \varepsilon \leq 1&lt;/script&gt;, and &lt;script type=&quot;math/tex&quot;&gt;\mu = 0.5 , \, \sigma = 1&lt;/script&gt;. If we generate a sample &lt;script type=&quot;math/tex&quot;&gt;\varepsilon = 0.9&lt;/script&gt;, then after you apply the transformation &lt;script type=&quot;math/tex&quot;&gt;\mu + \sigma \cdot \varepsilon&lt;/script&gt;, you get &lt;script type=&quot;math/tex&quot;&gt;\pi = 0.5 + 1 \cdot 0.9 = 1.4&lt;/script&gt;, which is beyond the upper bound.&lt;/p&gt;
+
+&lt;p&gt;To generate the proper upper and lower bounds, we will use the equations below:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L = \frac{-1 - \mu_{\theta}}{\sigma_{\theta}}&lt;/script&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;U = \frac{1 - \mu_{\theta}}{\sigma_{\theta}}&lt;/script&gt;
+
+&lt;p&gt;Using our previous example, we find that &lt;script type=&quot;math/tex&quot;&gt;U = 0.5&lt;/script&gt;, which means that the largest &lt;script type=&quot;math/tex&quot;&gt;\varepsilon&lt;/script&gt; we can sample is 0.5. Plugging this into our reparameterized equation, we see that the largest &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt; we can generate is 1. Similarly, &lt;script type=&quot;math/tex&quot;&gt;L = -1.5&lt;/script&gt;, which means that the lowest &lt;script type=&quot;math/tex&quot;&gt;\pi&lt;/script&gt; we can generate is -1. Perfect, we figured it out!&lt;/p&gt;
+
+&lt;p&gt;Given the PDF for a normal distribution:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;p(\varepsilon) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{\varepsilon - \mu}{\sigma}\right)^2}&lt;/script&gt;
+
+&lt;p&gt;We will let &lt;script type=&quot;math/tex&quot;&gt;F(\varepsilon)&lt;/script&gt; denote our cumulative distribution function (CDF). Our truncated density now becomes:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;p(\varepsilon \mid L \leq \varepsilon \leq U) = \frac{p(\varepsilon)}{F(U) - F(L)} \, \, \text{for} \, L \leq \varepsilon \leq U&lt;/script&gt;
+
+&lt;p&gt;The denominator, &lt;script type=&quot;math/tex&quot;&gt;F(U) - F(L)&lt;/script&gt;, is the normalizing constant that allows the truncated density to integrate to 1. The reason we do this is because, as shown below, we are only sampling from a portion of &lt;script type=&quot;math/tex&quot;&gt;p(\varepsilon)&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;http://localhost:4000/images/truncated_distribution.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;You can import &lt;code class=&quot;highlighter-rouge&quot;&gt;scipy&lt;/code&gt; and use the following function to generate samples from a truncated normal distribution:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;scipy.stats&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stats&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;mu_dims&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Dimensionality of the Mu generated by the Neural Network
+&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;n_samples&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10000&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;sn_mu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Standard Normal Mu
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;sn_sigma&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Standard Normal Sigma
+&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;generator&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stats&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;truncnorm&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lower_bound&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_mu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upper_bound&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_mu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;loc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_mu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;scale&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sn_sigma&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;epsilons&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;generator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rvs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n_samples&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mu_dims&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posterior.gif&quot; alt=&quot;Alt Text&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This distribution looks a lot nicer than both of the previous approaches, and has some nice properties:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;It only has one peak at all times&lt;/li&gt;
+  &lt;li&gt;Outputs do not need to be clipped&lt;/li&gt;
+  &lt;li&gt;The policy doesn’t look overly optimistic.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;concluding-remarks&quot;&gt;Concluding Remarks&lt;/h2&gt;
+
+&lt;p&gt;In this post, we examined a few approaches to approximating a posterior distribution over our policy. Ultimately, we feel that using a neural network with a truncated normal policy is the best approach out of those examined. We learned how to reparameterize a truncated normal, which allows us to train the policy network using backpropagation.&lt;/p&gt;
+
+&lt;h2 id=&quot;acknowledgments&quot;&gt;Acknowledgments&lt;/h2&gt;
+
+&lt;p&gt;I would like to thank &lt;a href=&quot;https://www.linkedin.com/in/alek-riley-609073110/&quot;&gt;Alek Riley&lt;/a&gt; for his feedback on how to improve the clarity of certain explanations.&lt;/p&gt;
+
+&lt;div id=&quot;disqus_thread&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = http://localhost:4000;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = /bayesian-policy; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://brandinho-github-io.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+&lt;/script&gt;
+
+&lt;noscript&gt;Please enable JavaScript to view the &lt;a href=&quot;https://disqus.com/?ref_noscript&quot;&gt;comments powered by Disqus.&lt;/a&gt;&lt;/noscript&gt;</content><author><name>Brandon Da Silva</name><email>brandasilva9@gmail.com</email></author><category term="Reinforcement Learning" /><category term="Bayesian" /><category term="Reparameterization" /><summary type="html">Reinforcement Learning, Neural Networks, Bayesian</summary></entry></feed>

@@ -1,0 +1,16 @@
+current directory: /Users/brandinho/Desktop/brandinho.github.io/vendor/cache/ruby/2.5.0/gems/eventmachine-1.2.7/ext/fastfilereader
+/Users/brandinho/.rvm/rubies/ruby-2.5.1/bin/ruby -r ./siteconf20181203-76822-pblnnw.rb extconf.rb
+creating Makefile
+
+current directory: /Users/brandinho/Desktop/brandinho.github.io/vendor/cache/ruby/2.5.0/gems/eventmachine-1.2.7/ext/fastfilereader
+make "DESTDIR=" clean
+
+current directory: /Users/brandinho/Desktop/brandinho.github.io/vendor/cache/ruby/2.5.0/gems/eventmachine-1.2.7/ext/fastfilereader
+make "DESTDIR="
+compiling mapper.cpp
+compiling rubymain.cpp
+linking shared-object fastfilereaderext.bundle
+
+current directory: /Users/brandinho/Desktop/brandinho.github.io/vendor/cache/ruby/2.5.0/gems/eventmachine-1.2.7/ext/fastfilereader
+make "DESTDIR=" install
+/usr/local/opt/coreutils/bin/ginstall -c -m 0755 fastfilereaderext.bundle ./.gem.20181203-76822-cn9z29
