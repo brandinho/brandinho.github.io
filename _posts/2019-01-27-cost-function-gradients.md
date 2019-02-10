@@ -251,7 +251,7 @@ $$\frac{\partial \mathcal{L}}{\partial w} = X^\boldsymbol{\top}(\hat{y} - y)$$
 
 ## Concluding Remarks
 
-After reading this post it might be temping to say that you can use Mean Squared Error (MSE) for logistic regression since the derivatives for linear and logistic regression are the same. However, this is incorrect. It is important to realize that derivative only works out to be the same because there is no activation function for linear regression. If you now have a sigmoid activation function in the output, then $$\frac{\partial \mathcal{L}}{\partial z} \neq (\hat{y} - y)$$ for $$\mathcal{L}_{MSE}$$.
+After reading this post it might be temping to say that you can use Mean Squared Error (MSE) for logistic regression since the derivatives for linear and logistic regression are the same. However, this is incorrect. It is important to realize that the derivative only works out to be the same because there is no activation function for linear regression. If you now have a sigmoid activation function in the output, then $$\frac{\partial \mathcal{L}}{\partial z} \neq (\hat{y} - y)$$ for $$\mathcal{L}_{MSE}$$.
 
 I hope you enjoyed learning about the math behind some supervised learning loss functions! In the future I might make another blog post about loss functions, except with less math and more visuals.
 
