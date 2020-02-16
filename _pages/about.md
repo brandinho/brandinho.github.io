@@ -18,3 +18,8 @@ Speaking Engagements:
 * **Reinforcement Learning Applied to Poker and Financial Markets**. Institutional Investor:
 Innovation in Investment. *July 2018*
 * **AI Bootcamp**. Institutional Investor: Roundtable for Public Funds. *April 2018*
+
+Media Interviews:
+
+* [**OPTrust stays ahead of the curve on artificial intelligence**](http://www.investmentreview.com/news/optrust-stays-ahead-of-the-curve-on-artificial-intelligence-9235). Canadian Investment Review. *March 2019*
+* [**Institutional investors turn to AI, data science to yield alpha**](https://www.benefitscanada.com/news/institutional-investors-turning-to-ai-data-science-to-improve-processes-yield-alpha-137147). Benefits Canada. *October 2019*
