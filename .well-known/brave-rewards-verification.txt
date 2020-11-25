@@ -1,0 +1,4 @@
+This is a Brave Rewards publisher verification file.
+
+Domain: brandinho.github.io
+Token: 58e303b2d07967c2683183f3cdf8f679d4039c616630dd3bf44781e7d7e028eb
