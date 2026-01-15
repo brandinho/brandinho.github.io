@@ -105,12 +105,12 @@ author:
   avatar           : "/images/bio-photo.jpg"
   bio              : "Machine Learning Blog"
   location         : "Toronto, ON"
-  email            : "brandasilva9@gmail.com"
+  # email            : "brandasilva9@gmail.com"
   github           : "brandinho"
   linkedin         : "brandon-da-silva-a67496a7"
   links:
-    - label: "Email"
-      icon: "fas fa-fw fa-envelope-square"
+    # - label: "Email"
+    #   icon: "fas fa-fw fa-envelope-square"
       # url: mailto:your.name@email.com
     - label: "Website"
       icon: "fas fa-fw fa-link"
